@@ -66,13 +66,35 @@ possible if the platform grows substantially.
 | PDF service | Creates a downloadable resume from published structured data. |
 | AWS hosting and networking | Runs the application and controls how services communicate securely. |
 
+### Public availability fallback
+
+The public profile should remain visible when the database is temporarily
+unavailable. The application should maintain a safe, read-only copy of the
+latest published public content using an application cache or generated static
+snapshot. Public profile, experience, project, skills, and resume pages may
+use that copy when a live database read fails.
+
+The fallback must contain published content only. It must never include
+drafts, private inquiry data, admin information, or private notes. Admin
+actions, contact-inquiry storage, publishing changes, and other writes must
+continue to require a healthy database and should show a clear temporary
+error instead of pretending the change succeeded.
+
+The fallback should identify itself in logs and may show a subtle,
+non-alarming notice to the owner or visitors when appropriate. Once the
+database becomes available again, normal live reads should resume and the
+published snapshot should be refreshed after successful publishing.
+
 ### Request flows
 
 For a public page:
 
 1. A visitor's browser requests a page.
 2. The application asks the database for published content.
-3. The application returns only content allowed on the public site.
+3. If the database read succeeds, the application returns only content allowed
+   on the public site.
+4. If the database read fails, the application serves the latest safe
+   published snapshot or cache instead.
 
 For an admin edit:
 
@@ -237,14 +259,21 @@ The deployment should include:
 - Invalid form input should return a clear validation error.
 - Authentication failures should not reveal whether sensitive account details
   exist.
-- Database or email failures should be logged and surfaced as a useful
-  user-facing error rather than silently ignored.
+- Public database read failures should be logged and handled by serving the
+  latest safe published snapshot or cache, so the profile remains available.
+- Database failures affecting admin actions or writes should be logged and
+  surfaced as a useful temporary error rather than silently ignored.
 - Publishing should fail safely if required content is invalid.
 - A failed email notification should not silently delete a successfully stored
   inquiry; the system should preserve the inquiry and record the notification
   failure for later review.
 - Public pages should handle missing or archived content with a deliberate
   not-found response.
+
+The system should expose a basic health signal that distinguishes live
+database-backed operation from read-only fallback operation. The fallback
+should have a defined freshness expectation and should fail clearly if no
+published snapshot has ever been created.
 
 ## 9. Testing and learning plan
 
@@ -253,6 +282,10 @@ Testing should focus on rules that protect data and explain the architecture:
 - Unit tests for publication-state and ordering rules.
 - Integration tests for public versus admin access.
 - Tests that verify drafts are not publicly visible.
+- Tests that verify public pages use the safe published snapshot when the
+  database is unavailable.
+- Tests that verify admin writes do not report success while the database is
+  unavailable.
 - Tests for contact validation and inquiry storage.
 - Tests for PDF generation from representative resume data.
 - A small end-to-end test for signing in, editing a draft, publishing it, and
