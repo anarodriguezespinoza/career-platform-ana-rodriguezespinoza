@@ -1,6 +1,6 @@
 import type { PublicContent } from "../../domain/content/types";
 
-export const SNAPSHOT_SCHEMA_VERSION = 1;
+export const SNAPSHOT_SCHEMA_VERSION = 2;
 
 export type PublishedSnapshot = {
   schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
@@ -84,10 +84,11 @@ function validateProjects(value: unknown): void {
   value.forEach((item, index) => {
     const path = `content.projects[${index}]`;
     const project = requireRecord(item, path);
-    exactKeys(project, ["id", "slug", "name", "description", "url", "repositoryUrl", "displayOrder", "technologies"], path);
+    exactKeys(project, ["id", "slug", "name", "description", "url", "repositoryUrl", "isFeatured", "displayOrder", "technologies"], path);
     for (const field of ["id", "slug", "name", "description"]) requireString(project[field], `${path}.${field}`);
     requireNullableString(project.url, `${path}.url`);
     requireNullableString(project.repositoryUrl, `${path}.repositoryUrl`);
+    if (typeof project.isFeatured !== "boolean") throw new SnapshotValidationError(`${path}.isFeatured must be a boolean`);
     requireOrder(project.displayOrder, `${path}.displayOrder`);
     if (!Array.isArray(project.technologies)) throw new SnapshotValidationError(`${path}.technologies must be an array`);
     project.technologies.forEach((item, technologyIndex) => {

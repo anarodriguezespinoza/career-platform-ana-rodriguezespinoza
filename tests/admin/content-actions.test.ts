@@ -67,9 +67,23 @@ describe("AdminContentService", () => {
   });
 
   it("returns draft content for an authenticated preview", async () => {
-    const repo = repository({ ...emptyContent, projects: [{ id: "p", slug: "draft", name: "Draft", description: "Private", url: null, repositoryUrl: null, displayOrder: 0, publicationState: "DRAFT", technologies: [], createdAt: new Date(), updatedAt: new Date() }] });
+    const repo = repository({ ...emptyContent, projects: [{ id: "p", slug: "draft", name: "Draft", description: "Private", url: null, repositoryUrl: null, isFeatured: false, displayOrder: 0, publicationState: "DRAFT", technologies: [], createdAt: new Date(), updatedAt: new Date() }] });
     const service = new AdminContentService(repo);
 
     await expect(service.previewDraft(actor)).resolves.toMatchObject({ projects: [{ slug: "draft" }] });
   });
 });
+
+  it("validates and persists project featured state", async () => {
+    const repo = repository();
+    const input: SaveDraftInput = {
+      type: "project",
+      id: "project-1",
+      data: { slug: "project", name: "Project", description: "Description", isFeatured: true },
+    };
+    const service = new AdminContentService(repo);
+
+    await service.saveDraft(input, actor);
+
+    expect(repo.saveDraft).toHaveBeenCalledWith(input);
+  });

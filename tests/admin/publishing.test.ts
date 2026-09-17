@@ -67,3 +67,69 @@ describe("admin publishing", () => {
     expect(repository.setPublicationState).toHaveBeenNthCalledWith(2, "skill", "skill-1", "ARCHIVED");
   });
 });
+
+  it("preserves archived records during publish", async () => {
+    const archived = { id: "archived-project", slug: "archived", name: "Archived", description: "Hidden", url: null, repositoryUrl: null, isFeatured: true, displayOrder: 0, publicationState: "ARCHIVED", technologies: [], createdAt: new Date(), updatedAt: new Date() };
+    const { service, repository } = setup({ ...validContent, projects: [archived] });
+
+    await service.publishContent(actor);
+
+    expect(repository.setPublicationState).not.toHaveBeenCalledWith("project", "archived-project", "PUBLISHED");
+  });
+
+  it("reads and validates content inside the publish transaction", async () => {
+    const order: string[] = [];
+    const repository = setup().repository;
+    vi.mocked(repository.transaction).mockImplementationOnce(async (callback) => {
+      order.push("transaction");
+      const result = await callback(repository);
+      order.push("transaction-complete");
+      return result;
+    });
+    vi.mocked(repository.getDraftContent).mockImplementation(async () => {
+      order.push("read");
+      return validContent;
+    });
+    const service = new AdminContentService(repository, setup().snapshot);
+
+    await service.publishContent(actor);
+
+    expect(order).toEqual(["transaction", "read", "transaction-complete"]);
+  });
+
+  it.each([
+    ["experience", { id: "experience-1", company: "", role: "Role", description: "Description", startDate: new Date(), endDate: null, displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date() }],
+    ["skill", { id: "skill-1", name: "", category: "Languages", displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date() }],
+    ["resumeSettings", { id: "resume-1", title: "", intro: "Intro", resumeUrl: null, publicationState: "DRAFT", updatedAt: new Date() }],
+  ] as const)("validates required fields for %s before state updates", async (type, record) => {
+    const content = { ...validContent, [type === "experience" ? "experience" : type === "skill" ? "skills" : "resumeSettings"]: type === "resumeSettings" ? record : [record] } as EditableContent;
+    const { service, repository } = setup(content);
+
+    await expect(service.publishContent(actor)).rejects.toMatchObject({ code: "INVALID_CONTENT" });
+    expect(repository.setPublicationState).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the snapshot after unpublish and archive", async () => {
+    const { service, repository, snapshot } = setup();
+
+    await service.unpublishRecord("project", "project-1", actor);
+    await service.archiveRecord("skill", "skill-1", actor);
+
+    expect(snapshot.write).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports snapshot refresh only when a store is configured and written", async () => {
+    const { repository } = setup();
+    const service = new AdminContentService(repository);
+
+    await expect(service.publishContent(actor)).resolves.toEqual({ published: true, snapshotRefreshed: false });
+  });
+
+  it("does not project an archived profile as published", async () => {
+    const archivedProfile = { ...validContent.profile!, publicationState: "ARCHIVED" };
+    const { service, snapshot } = setup({ ...validContent, profile: archivedProfile });
+
+    await service.publishContent(actor);
+
+    expect(snapshot.write).toHaveBeenCalledWith(expect.objectContaining({ content: expect.objectContaining({ profile: null }) }));
+  });

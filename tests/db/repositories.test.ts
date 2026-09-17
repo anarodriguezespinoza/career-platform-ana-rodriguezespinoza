@@ -85,6 +85,7 @@ describe("ContentRepository", () => {
           description: "Public",
           displayOrder: 1,
           publicationState: PublicationState.PUBLISHED,
+          isFeatured: true,
         },
         {
           id: "project-draft",
@@ -107,6 +108,7 @@ describe("ContentRepository", () => {
     expect(content.projects.map(({ slug }) => slug)).toEqual([
       "published-project",
     ]);
+    expect(content.projects[0]?.isFeatured).toBe(true);
     expect(await contentRepository.getPublishedProject("draft-project")).toBeNull();
   });
 

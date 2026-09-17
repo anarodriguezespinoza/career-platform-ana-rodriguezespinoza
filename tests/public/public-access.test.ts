@@ -21,6 +21,7 @@ const publicContent: PublicContent = {
       description: "A published project.",
       url: null,
       repositoryUrl: null,
+      isFeatured: false,
       displayOrder: 0,
       technologies: [],
     },

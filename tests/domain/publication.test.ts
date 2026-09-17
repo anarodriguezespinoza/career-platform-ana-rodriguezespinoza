@@ -65,6 +65,7 @@ const editableContent: EditableContent = {
       description: "Public",
       url: null,
       repositoryUrl: null,
+      isFeatured: false,
       displayOrder: 1,
       publicationState: "PUBLISHED",
       technologies: [
@@ -81,6 +82,7 @@ const editableContent: EditableContent = {
       description: "Private",
       url: null,
       repositoryUrl: null,
+      isFeatured: false,
       displayOrder: 0,
       publicationState: "DRAFT",
       technologies: [],
@@ -144,5 +146,16 @@ describe("publication", () => {
         "projects[0].name is required",
       ],
     });
+  });
+});
+
+describe("featured project projection", () => {
+  it("keeps isFeatured in the public project projection", () => {
+    const content = buildPublicContent({
+      ...editableContent,
+      projects: [{ ...editableContent.projects[0]!, isFeatured: true }],
+    });
+
+    expect(content.projects[0]?.isFeatured).toBe(true);
   });
 });

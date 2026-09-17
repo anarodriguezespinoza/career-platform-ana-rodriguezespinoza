@@ -42,6 +42,7 @@ model Project {
   description      String
   url              String?
   repositoryUrl    String?
+  isFeatured       Boolean              @default(false)
   displayOrder     Int                  @default(0)
   publicationState String               @default("DRAFT")
   technologies     ProjectTechnology[]

@@ -40,6 +40,7 @@ export type EditableProject = {
   description: string;
   url: string | null;
   repositoryUrl: string | null;
+  isFeatured: boolean;
   displayOrder: number;
   publicationState: string;
   technologies: EditableProjectTechnology[];

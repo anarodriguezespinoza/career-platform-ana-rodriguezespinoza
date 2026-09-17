@@ -1,4 +1,5 @@
 import { buildPublicContent } from "../../domain/content/publication";
+import { SNAPSHOT_SCHEMA_VERSION } from "./snapshot-schema";
 import type { EditableContent, PublicContent } from "../../domain/content/types";
 import { logSourceStatus, type SourceLogger } from "./source-status";
 import type { SnapshotStore } from "./snapshot-store";
@@ -40,7 +41,7 @@ export async function refreshPublishedSnapshot(
 ): Promise<void> {
   const content = buildPublicContent(await loadLive());
   await snapshotStore.write({
-    schemaVersion: 1,
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     content,
   });

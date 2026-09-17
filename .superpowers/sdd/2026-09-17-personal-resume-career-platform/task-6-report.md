@@ -22,3 +22,20 @@ Checks:
 Concerns:
 - The admin UI is intentionally minimal and currently renders common fields; richer field-specific controls can be layered on later without changing the service boundary.
 - Snapshot configuration is required for publishing, while preview/content reads intentionally do not require snapshot configuration.
+
+## Review-fix update
+
+Fixed all Task 6 review findings:
+- Publish now preserves `ARCHIVED` records and excludes them from the generated public projection.
+- Publish reads, validates all editable record types, and applies publication-state updates inside one database transaction.
+- Unpublish/archive state changes and post-state reads run transactionally, followed by snapshot refresh.
+- Snapshot results report `snapshotRefreshed: true` only after a configured store successfully receives a write; otherwise publish returns `false`.
+- Added `Project.isFeatured` persistence, Prisma migration, editable/public types, repository writes, public projection, snapshot validation, and admin checkbox editing.
+- Fixed controlled admin inputs to bind `data[key]`, including checkbox state.
+- Added regression tests for archived preservation, transaction ordering, all-type validation, snapshot refresh/results, featured projection, and database persistence.
+
+Review-fix checks:
+- `npm test -- tests/admin/content-actions.test.ts tests/admin/publishing.test.ts`: PASS (17 tests).
+- `npm run typecheck`: PASS.
+- `npm run build`: PASS.
+- `npm test`: PASS (14 files, 59 tests).

@@ -13,7 +13,7 @@ export type SaveDraftInput = {
   id: string;
   data: Record<string, unknown>;
 };
-export type PublishResult = { published: true; snapshotRefreshed: true };
+export type PublishResult = { published: true; snapshotRefreshed: boolean };
 export type PreviewContent = EditableContent;
 
 export type ContentRepositoryPort = {
@@ -73,17 +73,17 @@ export class AdminContentService {
   async publishContent(actor: AdminIdentity | null): Promise<PublishResult> {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
-      const content = await this.repository.getDraftContent();
-      const publishableContent = markAllPublishable(content);
-      const validation = validatePublishableContent(publishableContent);
-      if (!validation.valid) throw new AdminOperationError("INVALID_CONTENT", validation.errors.join(", "));
-      const published = buildPublicContent(publishableContent);
-      await this.repository.transaction(async (transactionRepository) => {
+      const published = await this.repository.transaction(async (transactionRepository) => {
+        const content = await transactionRepository.getDraftContent();
+        const publishableContent = markPublishableRecords(content);
+        const validation = validatePublishableContent(publishableContent);
+        if (!validation.valid) throw new AdminOperationError("INVALID_CONTENT", validation.errors.join(", "));
         await publishRecords(transactionRepository, content);
+        return buildPublicContent(publishableContent);
       });
-      if (this.snapshotStore) await this.snapshotStore.write(createSnapshot(published));
+      const snapshotRefreshed = await this.refreshSnapshot(published);
       logOperation(identity, "publish");
-      return { published: true, snapshotRefreshed: true };
+      return { published: true, snapshotRefreshed };
     });
   }
 
@@ -98,9 +98,19 @@ export class AdminContentService {
   private async changeState(type: ContentType, id: string, state: string, actor: AdminIdentity | null, operation: string) {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
-      await this.repository.setPublicationState(type, id, state);
+      const content = await this.repository.transaction(async (transactionRepository) => {
+        await transactionRepository.setPublicationState(type, id, state);
+        return transactionRepository.getDraftContent();
+      });
+      await this.refreshSnapshot(buildPublicContent(content));
       logOperation(identity, operation, type, id);
     });
+  }
+
+  private async refreshSnapshot(content: ReturnType<typeof buildPublicContent>): Promise<boolean> {
+    if (!this.snapshotStore) return false;
+    await this.snapshotStore.write(createSnapshot(content));
+    return true;
   }
 }
 
@@ -123,23 +133,23 @@ function validateDraftInput(input: SaveDraftInput): SaveDraftInput {
   return input;
 }
 
-function markAllPublishable(content: EditableContent): EditableContent {
+function markPublishableRecords(content: EditableContent): EditableContent {
   return {
     ...content,
-    profile: content.profile && { ...content.profile, publicationState: PublicationState.PUBLISHED },
-    experience: content.experience.map((record) => ({ ...record, publicationState: PublicationState.PUBLISHED })),
-    projects: content.projects.map((record) => ({ ...record, publicationState: PublicationState.PUBLISHED })),
-    skills: content.skills.map((record) => ({ ...record, publicationState: PublicationState.PUBLISHED })),
-    resumeSettings: content.resumeSettings && { ...content.resumeSettings, publicationState: PublicationState.PUBLISHED },
+    profile: content.profile && (content.profile.publicationState === PublicationState.ARCHIVED ? content.profile : { ...content.profile, publicationState: PublicationState.PUBLISHED }),
+    experience: content.experience.map((record) => record.publicationState === PublicationState.ARCHIVED ? record : { ...record, publicationState: PublicationState.PUBLISHED }),
+    projects: content.projects.map((record) => record.publicationState === PublicationState.ARCHIVED ? record : { ...record, publicationState: PublicationState.PUBLISHED }),
+    skills: content.skills.map((record) => record.publicationState === PublicationState.ARCHIVED ? record : { ...record, publicationState: PublicationState.PUBLISHED }),
+    resumeSettings: content.resumeSettings && (content.resumeSettings.publicationState === PublicationState.ARCHIVED ? content.resumeSettings : { ...content.resumeSettings, publicationState: PublicationState.PUBLISHED }),
   };
 }
 
 async function publishRecords(repository: ContentRepositoryPort, content: EditableContent) {
-  if (content.profile) await repository.setPublicationState("profile", content.profile.id, PublicationState.PUBLISHED);
-  for (const record of content.experience) await repository.setPublicationState("experience", record.id, PublicationState.PUBLISHED);
-  for (const record of content.projects) await repository.setPublicationState("project", record.id, PublicationState.PUBLISHED);
-  for (const record of content.skills) await repository.setPublicationState("skill", record.id, PublicationState.PUBLISHED);
-  if (content.resumeSettings) await repository.setPublicationState("resumeSettings", content.resumeSettings.id, PublicationState.PUBLISHED);
+  if (content.profile && content.profile.publicationState !== PublicationState.ARCHIVED) await repository.setPublicationState("profile", content.profile.id, PublicationState.PUBLISHED);
+  for (const record of content.experience) if (record.publicationState !== PublicationState.ARCHIVED) await repository.setPublicationState("experience", record.id, PublicationState.PUBLISHED);
+  for (const record of content.projects) if (record.publicationState !== PublicationState.ARCHIVED) await repository.setPublicationState("project", record.id, PublicationState.PUBLISHED);
+  for (const record of content.skills) if (record.publicationState !== PublicationState.ARCHIVED) await repository.setPublicationState("skill", record.id, PublicationState.PUBLISHED);
+  if (content.resumeSettings && content.resumeSettings.publicationState !== PublicationState.ARCHIVED) await repository.setPublicationState("resumeSettings", content.resumeSettings.id, PublicationState.PUBLISHED);
 }
 
 export function createAdminContentService(snapshotStore?: SnapshotStore) {
