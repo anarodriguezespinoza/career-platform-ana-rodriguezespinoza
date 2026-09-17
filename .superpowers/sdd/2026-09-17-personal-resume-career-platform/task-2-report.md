@@ -78,3 +78,19 @@ Implemented the relational career-content and contact-inquiry data layer with Pr
 - `npm run typecheck`: passed.
 
 The first combined test attempt ran before applying migrations to the clean local database and failed because the test database had no tables; after applying migrations, the covering suite passed.
+
+## Migration integrity fix report
+
+### Fix
+
+- Restored `20260917214047_publish_resume_settings/migration.sql` to its original immutable content, including its original default-based table rewrite.
+- Added follow-up migration `20260917214400_publish_existing_resume_settings/migration.sql` to backfill existing `ResumeSettings` rows from `DRAFT` to `PUBLISHED`.
+- Kept the seed upsert update that repairs an existing `resume-settings-default` row to `PUBLISHED`.
+- Added migration regression coverage proving the schema migration remains unchanged in behavior and the follow-up migration performs the backfill.
+
+### Validation
+
+- `DATABASE_URL=file:./dev.db npx prisma validate`: passed.
+- `DATABASE_URL=file:./dev.db npx prisma migrate dev --skip-seed`: passed on a clean database; applied all three migrations in order.
+- `DATABASE_URL=file:./dev.db npm test -- tests/db/schema.test.ts tests/db/repositories.test.ts tests/db/migrations.test.ts`: passed, 3 files and 9 tests.
+- `npm run typecheck`: passed.
