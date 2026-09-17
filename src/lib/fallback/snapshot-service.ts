@@ -1,4 +1,5 @@
-import type { PublicContent } from "../../domain/content/types";
+import { buildPublicContent } from "../../domain/content/publication";
+import type { EditableContent, PublicContent } from "../../domain/content/types";
 import { logSourceStatus, type SourceLogger } from "./source-status";
 import type { SnapshotStore } from "./snapshot-store";
 
@@ -11,12 +12,12 @@ export class PublicContentUnavailableError extends Error {
 }
 
 export async function readPublicContent(
-  loadLive: () => Promise<PublicContent>,
+  loadLive: () => Promise<EditableContent>,
   snapshotStore: SnapshotStore,
   logger?: SourceLogger,
 ): Promise<{ content: PublicContent; source: "database" | "snapshot" }> {
   try {
-    const content = await loadLive();
+    const content = buildPublicContent(await loadLive());
     logSourceStatus({ event: "public_content_source", source: "database" }, logger);
     return { content, source: "database" };
   } catch (databaseError) {

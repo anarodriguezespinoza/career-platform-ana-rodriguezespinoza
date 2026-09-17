@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createSnapshot,
+  parseSnapshot,
   SnapshotValidationError,
 } from "../../src/lib/fallback/snapshot-schema";
 import {
@@ -12,7 +13,26 @@ import {
   PublicContentUnavailableError,
   readPublicContent,
 } from "../../src/lib/fallback/snapshot-service";
-import type { PublicContent } from "../../src/domain/content/types";
+import type { EditableContent, PublicContent } from "../../src/domain/content/types";
+
+const editableContent: EditableContent = {
+  profile: {
+    id: "profile-1",
+    name: "Ana",
+    headline: "Engineer",
+    summary: "Summary",
+    email: "ana@example.com",
+    location: "Remote",
+    avatarUrl: null,
+    publicationState: "PUBLISHED",
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-02"),
+  },
+  experience: [],
+  projects: [],
+  skills: [],
+  resumeSettings: null,
+};
 
 const content: PublicContent = {
   profile: {
@@ -58,6 +78,47 @@ describe("snapshot service", () => {
     ).toThrow(SnapshotValidationError);
   });
 
+  it("rejects invalid snapshot primitive, nullable, date, and order types", () => {
+    const snapshot = createSnapshot(content);
+
+    expect(() => parseSnapshot({
+      ...snapshot,
+      content: {
+        ...snapshot.content,
+        profile: { ...snapshot.content.profile!, name: 42 },
+      },
+    })).toThrow(SnapshotValidationError);
+    expect(() => parseSnapshot({
+      ...snapshot,
+      content: {
+        ...snapshot.content,
+        profile: { ...snapshot.content.profile!, avatarUrl: 42 },
+      },
+    })).toThrow(SnapshotValidationError);
+    expect(() => parseSnapshot({
+      ...snapshot,
+      content: {
+        ...snapshot.content,
+        experience: [{
+          id: "experience-1",
+          company: "Company",
+          role: "Role",
+          description: "Description",
+          startDate: "not-a-date",
+          endDate: null,
+          displayOrder: 0,
+        }],
+      },
+    })).toThrow(SnapshotValidationError);
+    expect(() => parseSnapshot({
+      ...snapshot,
+      content: {
+        ...snapshot.content,
+        skills: [{ id: "skill-1", name: "TypeScript", category: "Languages", displayOrder: -1 }],
+      },
+    })).toThrow(SnapshotValidationError);
+  });
+
   it("stores and reads a versioned validated JSON snapshot", async () => {
     const client = createMemoryClient();
     const store = createS3SnapshotStore({
@@ -71,15 +132,38 @@ describe("snapshot service", () => {
     expect(await store.read()).toEqual(snapshot);
   });
 
+  it("projects raw live records before returning database content", async () => {
+    const raw = {
+      ...editableContent,
+      profile: { ...editableContent.profile!, privateNotes: "secret" },
+    };
+
+    await expect(
+      readPublicContent(async () => raw, {
+        read: async () => null,
+        write: async () => undefined,
+      }),
+    ).resolves.toMatchObject({
+      source: "database",
+      content: { profile: { id: "profile-1" } },
+    });
+    const result = await readPublicContent(async () => raw, {
+      read: async () => null,
+      write: async () => undefined,
+    });
+    expect(result.content.profile).not.toHaveProperty("privateNotes");
+    expect(result.content.profile).not.toHaveProperty("publicationState");
+  });
+
   it("returns live content and emits its source", async () => {
     const events: unknown[] = [];
 
     await expect(
-      readPublicContent(async () => content, {
+      readPublicContent(async () => editableContent, {
         read: async () => null,
         write: async () => undefined,
       }, (event) => events.push(event)),
-    ).resolves.toEqual({ content, source: "database" });
+    ).resolves.toEqual({ content: { ...content }, source: "database" });
     expect(events).toEqual([{ event: "public_content_source", source: "database" }]);
   });
 
