@@ -1,0 +1,2 @@
+import type { PreviewContent } from "@/domain/content/admin-service";
+export function PreviewFrame({ content }: { content: PreviewContent }) { return <article aria-label="Draft preview"><h1>{content.profile?.name ?? "Untitled profile"}</h1><p>{content.profile?.headline}</p><p>{content.profile?.summary}</p><h2>Projects</h2><ul>{content.projects.map((project) => <li key={project.id}>{project.name}: {project.description}</li>)}</ul><h2>Experience</h2><ul>{content.experience.map((item) => <li key={item.id}>{item.role} at {item.company}</li>)}</ul></article>; }

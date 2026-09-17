@@ -33,3 +33,15 @@ export async function readPublicContent(
     throw new PublicContentUnavailableError(databaseError);
   }
 }
+
+export async function refreshPublishedSnapshot(
+  loadLive: () => Promise<EditableContent>,
+  snapshotStore: SnapshotStore,
+): Promise<void> {
+  const content = buildPublicContent(await loadLive());
+  await snapshotStore.write({
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    content,
+  });
+}
