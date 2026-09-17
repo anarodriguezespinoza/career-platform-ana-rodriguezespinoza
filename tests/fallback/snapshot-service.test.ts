@@ -119,6 +119,25 @@ describe("snapshot service", () => {
     })).toThrow(SnapshotValidationError);
   });
 
+  it("normalizes schema v1 snapshots without isFeatured for backward compatibility", () => {
+    const legacy = {
+      schemaVersion: 1,
+      generatedAt: "2026-09-01T00:00:00.000Z",
+      content: {
+        ...content,
+        projects: [{
+          id: "project-1", slug: "legacy-project", name: "Legacy", description: "Old snapshot",
+          url: null, repositoryUrl: null, displayOrder: 0, technologies: [],
+        }],
+      },
+    };
+
+    expect(parseSnapshot(legacy)).toMatchObject({
+      schemaVersion: 2,
+      content: { projects: [{ isFeatured: false }] },
+    });
+  });
+
   it("stores and reads a versioned validated JSON snapshot", async () => {
     const client = createMemoryClient();
     const store = createS3SnapshotStore({

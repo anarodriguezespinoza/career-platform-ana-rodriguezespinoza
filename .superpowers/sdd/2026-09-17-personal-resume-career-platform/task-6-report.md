@@ -39,3 +39,15 @@ Review-fix checks:
 - `npm run typecheck`: PASS.
 - `npm run build`: PASS.
 - `npm test`: PASS (14 files, 59 tests).
+
+## Re-review fix update
+
+Fixed the remaining Task 6 re-review findings:
+- Restored shared admin navigation in `AdminLayout` with Dashboard, Content, and Preview links so nested admin pages remain navigable.
+- Added backward-compatible snapshot parsing for schema v1. Legacy project records missing `isFeatured` are normalized to `false` and returned as current schema v2 snapshots, preserving existing fallback snapshots across deployment.
+- Added regression coverage for the admin navigation contract and v1 snapshot normalization.
+
+Re-review checks:
+- `npm test -- tests/admin/content-actions.test.ts tests/admin/publishing.test.ts tests/auth/admin-boundary.test.ts tests/fallback/snapshot-service.test.ts`: PASS (27 tests).
+- `npm run typecheck`: PASS.
+- `npm run build`: PASS.

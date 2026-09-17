@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -10,5 +11,5 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   } catch {
     redirect("/sign-in");
   }
-  return <>{children}</>;
+  return <><header><nav aria-label="Admin navigation"><Link href={"/admin" as never}>Dashboard</Link> · <Link href={"/admin/content" as never}>Content</Link> · <Link href={"/admin/preview" as never}>Preview</Link></nav></header>{children}</>;
 }

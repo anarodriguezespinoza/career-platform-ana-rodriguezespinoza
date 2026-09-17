@@ -18,7 +18,11 @@ describe("admin route boundary", () => {
     requireAdmin.mockResolvedValue({ subject: "owner", email: "owner@example.com" });
     const children = "protected";
 
-    await expect(AdminLayout({ children })).resolves.toMatchObject({ props: { children } });
+    const result = await AdminLayout({ children });
+    expect(Array.isArray(result.props.children)).toBe(true);
+    expect(result.props.children).toContain(children);
+    expect(result.props.children[0].props.children.props["aria-label"]).toBe("Admin navigation");
+    expect(result.props.children[0].props.children.props.children).toHaveLength(5);
     expect(requireAdmin).toHaveBeenCalledWith(expect.any(Request));
     expect(redirect).not.toHaveBeenCalled();
   });

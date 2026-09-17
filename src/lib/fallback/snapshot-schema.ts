@@ -134,10 +134,18 @@ function validateContent(content: unknown): asserts content is PublicContent {
 export function parseSnapshot(value: unknown): PublishedSnapshot {
   const snapshot = requireRecord(value, "snapshot");
   exactKeys(snapshot, ["schemaVersion", "generatedAt", "content"], "snapshot");
-  if (snapshot.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) throw new SnapshotValidationError("unsupported snapshot schema version");
+  if (snapshot.schemaVersion !== 1 && snapshot.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
+    throw new SnapshotValidationError("unsupported snapshot schema version");
+  }
   if (typeof snapshot.generatedAt !== "string" || Number.isNaN(Date.parse(snapshot.generatedAt))) throw new SnapshotValidationError("generatedAt must be an ISO date");
-  validateContent(snapshot.content);
-  return snapshot as PublishedSnapshot;
+
+  const content = requireRecord(snapshot.content, "content");
+  const projects = content.projects;
+  const normalizedContent = snapshot.schemaVersion === 1 && Array.isArray(projects)
+    ? { ...content, projects: projects.map((project) => ({ ...requireRecord(project, "content.projects[]"), isFeatured: (project as Record<string, unknown>).isFeatured ?? false })) }
+    : content;
+  validateContent(normalizedContent);
+  return { schemaVersion: SNAPSHOT_SCHEMA_VERSION, generatedAt: snapshot.generatedAt, content: normalizedContent };
 }
 
 export function createSnapshot(content: PublicContent): PublishedSnapshot {
