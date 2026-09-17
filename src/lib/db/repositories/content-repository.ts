@@ -32,7 +32,7 @@ export class ContentRepository {
       this.getPublishedExperience(),
       this.getPublishedProjects(),
       this.getPublishedSkills(),
-      this.getResumeSettings(),
+      this.getPublishedResumeSettings(),
     ]);
 
     return { profile, experience, projects, skills, resumeSettings };
@@ -58,7 +58,10 @@ export class ContentRepository {
   }
 
   private getPublishedProfile() {
-    return this.db.profile.findFirst({ where: { publicationState: PublicationState.PUBLISHED } });
+    return this.db.profile.findFirst({
+      where: { publicationState: PublicationState.PUBLISHED },
+      orderBy: { id: "asc" },
+    });
   }
 
   private getPublishedExperience() {
@@ -100,6 +103,13 @@ export class ContentRepository {
 
   private getSkills() {
     return this.db.skill.findMany({ orderBy: orderedByDisplayOrder });
+  }
+
+  private getPublishedResumeSettings() {
+    return this.db.resumeSettings.findFirst({
+      where: { publicationState: PublicationState.PUBLISHED },
+      orderBy: { id: "asc" },
+    });
   }
 
   private getResumeSettings() {

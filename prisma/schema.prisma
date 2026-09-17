@@ -78,7 +78,10 @@ model ResumeSettings {
   title            String
   intro            String
   resumeUrl        String?
+  publicationState String   @default("DRAFT")
   updatedAt        DateTime @updatedAt
+
+  @@index([publicationState, id])
 }
 
 model ContactInquiry {

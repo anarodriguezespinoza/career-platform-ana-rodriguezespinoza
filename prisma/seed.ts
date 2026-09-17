@@ -69,6 +69,7 @@ async function main() {
       id: "resume-settings-default",
       title: "Ana Rodriguez Espinoza Resume",
       intro: "Resume and professional experience.",
+      publicationState: "PUBLISHED",
     },
   });
 }

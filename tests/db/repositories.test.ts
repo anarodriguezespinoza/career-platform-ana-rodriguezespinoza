@@ -23,16 +23,27 @@ beforeEach(async () => {
 
 describe("ContentRepository", () => {
   it("excludes drafts from public content and orders records deterministically", async () => {
-    await prisma.profile.create({
-      data: {
-        id: "profile-1",
-        name: "Ana Rodriguez",
-        headline: "Engineer",
-        summary: "Summary",
-        email: "ana@example.com",
-        location: "Remote",
-        publicationState: PublicationState.PUBLISHED,
-      },
+    await prisma.profile.createMany({
+      data: [
+        {
+          id: "profile-2",
+          name: "Later profile",
+          headline: "Engineer",
+          summary: "Summary",
+          email: "later@example.com",
+          location: "Remote",
+          publicationState: PublicationState.PUBLISHED,
+        },
+        {
+          id: "profile-1",
+          name: "Stable profile",
+          headline: "Engineer",
+          summary: "Summary",
+          email: "ana@example.com",
+          location: "Remote",
+          publicationState: PublicationState.PUBLISHED,
+        },
+      ],
     });
     await prisma.experience.createMany({
       data: [
@@ -110,10 +121,28 @@ describe("ContentRepository", () => {
         publicationState: PublicationState.DRAFT,
       },
     });
+    await prisma.resumeSettings.createMany({
+      data: [
+        {
+          id: "resume-draft",
+          title: "Draft resume",
+          intro: "Private",
+          publicationState: PublicationState.DRAFT,
+        },
+        {
+          id: "resume-published",
+          title: "Published resume",
+          intro: "Public",
+          publicationState: PublicationState.PUBLISHED,
+        },
+      ],
+    });
 
     const content = await contentRepository.getDraftContent();
+    const published = await contentRepository.listPublished();
 
     expect(content.projects[0]?.slug).toBe("draft-project");
+    expect(published.resumeSettings?.id).toBe("resume-published");
   });
 });
 
