@@ -64,7 +64,7 @@ async function main() {
 
   await prisma.resumeSettings.upsert({
     where: { id: "resume-settings-default" },
-    update: {},
+    update: { publicationState: "PUBLISHED" },
     create: {
       id: "resume-settings-default",
       title: "Ana Rodriguez Espinoza Resume",

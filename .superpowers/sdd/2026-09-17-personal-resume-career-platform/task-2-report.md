@@ -60,3 +60,21 @@ Implemented the relational career-content and contact-inquiry data layer with Pr
 - `DATABASE_URL=file:./dev.db npx prisma migrate dev --name publish_resume_settings --skip-seed`: passed; created and applied migration `20260917214047_publish_resume_settings`.
 - `DATABASE_URL=file:./dev.db npm test -- tests/db/schema.test.ts tests/db/repositories.test.ts`: passed, 2 files and 6 tests.
 - `npm run typecheck`: passed.
+
+## Scoped re-review fix report
+
+### Fix
+
+- Updated `20260917214047_publish_resume_settings` so legacy `ResumeSettings` rows are explicitly copied with `publicationState = 'PUBLISHED'` during the upgrade instead of receiving the new column default `DRAFT`.
+- Updated the seeded `resume-settings-default` upsert to set `publicationState: "PUBLISHED"` in its existing-row update branch.
+- Added `tests/db/migrations.test.ts` covering both migration backfill behavior and seed repair behavior.
+
+### Validation
+
+- `DATABASE_URL=file:./dev.db npx prisma validate`: passed.
+- `DATABASE_URL=file:./dev.db npx prisma generate`: passed.
+- `DATABASE_URL=file:./dev.db npx prisma migrate dev --skip-seed`: passed; applied both migrations to a clean local database.
+- `DATABASE_URL=file:./dev.db npm test -- tests/db/schema.test.ts tests/db/repositories.test.ts tests/db/migrations.test.ts`: passed, 3 files and 8 tests.
+- `npm run typecheck`: passed.
+
+The first combined test attempt ran before applying migrations to the clean local database and failed because the test database had no tables; after applying migrations, the covering suite passed.

@@ -9,7 +9,7 @@ CREATE TABLE "new_ResumeSettings" (
     "publicationState" TEXT NOT NULL DEFAULT 'DRAFT',
     "updatedAt" DATETIME NOT NULL
 );
-INSERT INTO "new_ResumeSettings" ("id", "intro", "resumeUrl", "title", "updatedAt") SELECT "id", "intro", "resumeUrl", "title", "updatedAt" FROM "ResumeSettings";
+INSERT INTO "new_ResumeSettings" ("id", "intro", "publicationState", "resumeUrl", "title", "updatedAt") SELECT "id", "intro", 'PUBLISHED' AS "publicationState", "resumeUrl", "title", "updatedAt" FROM "ResumeSettings";
 DROP TABLE "ResumeSettings";
 ALTER TABLE "new_ResumeSettings" RENAME TO "ResumeSettings";
 CREATE INDEX "ResumeSettings_publicationState_id_idx" ON "ResumeSettings"("publicationState", "id");
