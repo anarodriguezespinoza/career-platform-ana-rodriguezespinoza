@@ -41,7 +41,7 @@ describe("public content access", () => {
     });
 
     const { createPublicContentReader } = await import("../../src/lib/public/content");
-    const reader = createPublicContentReader({ loadLive, readPublicContent });
+    const reader = createPublicContentReader({ loadLive, readPublicContent, snapshotStore: { read: async () => null, write: async () => undefined } });
 
     await expect(reader()).resolves.toEqual({ content: publicContent, source: "database" });
     expect(loadLive).toHaveBeenCalledTimes(1);
@@ -61,3 +61,20 @@ describe("public content access", () => {
     await expect(findPublicProject("../private", publicContent)).resolves.toBeNull();
   });
 });
+
+  it("fails explicitly when the runtime snapshot store is not configured", async () => {
+    const { getRuntimeSnapshotStore } = await import("../../src/lib/public/content");
+    expect(() => getRuntimeSnapshotStore({ env: {} })).toThrow("published snapshot store is not configured");
+  });
+
+  it("uses the configured published snapshot store when live content is unavailable", async () => {
+    const snapshotStore = { read: vi.fn().mockResolvedValue({ schemaVersion: 1, generatedAt: "2026-09-17T00:00:00.000Z", content: publicContent }), write: vi.fn() };
+    const { createPublicContentReader } = await import("../../src/lib/public/content");
+    const reader = createPublicContentReader({
+      loadLive: async () => { throw new Error("database unavailable"); },
+      snapshotStore,
+    });
+
+    await expect(reader()).resolves.toEqual({ content: publicContent, source: "snapshot" });
+    expect(snapshotStore.read).toHaveBeenCalledTimes(1);
+  });

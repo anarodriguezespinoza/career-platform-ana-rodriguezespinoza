@@ -27,3 +27,17 @@ Implemented the public resume and portfolio experience using the safe published-
 - `npm test` retains 4 pre-existing database repository failures because the local SQLite database lacks the `ContactInquiry` table; unrelated migration/database setup was not changed.
 - `npm run lint` cannot run non-interactively in this checkout because `next lint` prompts to create an ESLint configuration. The production build completed its own lint/type validation successfully.
 - Task 3 provides the snapshot store interface but no concrete AWS client dependency; the public reader preserves the injected `SnapshotStore` seam and uses an empty default until infrastructure wiring supplies the store.
+
+## Review follow-up: configured snapshot runtime
+
+- Removed the no-op empty snapshot store from the public runtime boundary.
+- Added `getRuntimeSnapshotStore()`, backed by `S3_SNAPSHOT_BUCKET`, optional `S3_SNAPSHOT_KEY`, and the configured runtime `SnapshotObjectClient`; missing configuration now throws `PublicSnapshotConfigurationError`.
+- Wired `getPublicContent()` to the configured store so database outages can read the published snapshot and sitemap project URLs remain available at runtime.
+- Made sitemap generation runtime-only so builds do not silently precompute an empty project list when deployment configuration is unavailable.
+- Added regression coverage for explicit configuration failure and snapshot fallback behavior.
+
+Review follow-up validation:
+
+- `npm test -- tests/public/public-access.test.ts tests/public/metadata.test.ts tests/fallback/snapshot-service.test.ts tests/domain/publication.test.ts`: **PASS** (16 tests).
+- `npm run typecheck`: **PASS**.
+- `npm run build`: **PASS**.
