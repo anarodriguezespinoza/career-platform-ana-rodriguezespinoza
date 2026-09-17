@@ -41,3 +41,16 @@ Review follow-up validation:
 - `npm test -- tests/public/public-access.test.ts tests/public/metadata.test.ts tests/fallback/snapshot-service.test.ts tests/domain/publication.test.ts`: **PASS** (16 tests).
 - `npm run typecheck`: **PASS**.
 - `npm run build`: **PASS**.
+
+## Re-review follow-up: production snapshot client
+
+- Added `@aws-sdk/client-s3` and a production `SnapshotObjectClient` adapter using `GetObjectCommand` and `PutObjectCommand` with the AWS SDK credential/region provider chain.
+- Changed public runtime snapshot resolution to lazy initialization. Healthy database reads no longer require an S3 client or snapshot configuration; the adapter is created only if fallback is needed.
+- Preserved explicit configuration errors when an outage occurs without `S3_SNAPSHOT_BUCKET`.
+- Added regressions proving healthy live reads skip snapshot initialization and the AWS adapter maps snapshot reads to S3 commands.
+
+Re-review validation:
+
+- `npm test -- tests/public/public-access.test.ts tests/public/metadata.test.ts tests/fallback/snapshot-service.test.ts tests/domain/publication.test.ts`: **PASS** (18 tests).
+- `npm run typecheck`: **PASS**.
+- `npm run build`: **PASS**.

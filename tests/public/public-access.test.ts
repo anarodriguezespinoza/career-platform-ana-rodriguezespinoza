@@ -78,3 +78,32 @@ describe("public content access", () => {
     await expect(reader()).resolves.toEqual({ content: publicContent, source: "snapshot" });
     expect(snapshotStore.read).toHaveBeenCalledTimes(1);
   });
+
+describe("public runtime snapshot wiring", () => {
+  it("does not initialize snapshot infrastructure on a healthy live read", async () => {
+    const { createPublicContentReader } = await import("../../src/lib/public/content");
+    const snapshotStore = vi.fn(() => { throw new Error("snapshot client should not initialize"); });
+    const reader = createPublicContentReader({
+      loadLive: async () => ({ profile: null, experience: [], projects: [], skills: [], resumeSettings: null }),
+      snapshotStore,
+    });
+    const readPublicContent = vi.fn(async (load: () => Promise<unknown>, _store: unknown) => { await load(); return { content: publicContent, source: "database" as const }; });
+    const healthyReader = createPublicContentReader({
+      loadLive: async () => ({ profile: null, experience: [], projects: [], skills: [], resumeSettings: null }),
+      readPublicContent,
+      snapshotStore,
+    });
+    await expect(healthyReader()).resolves.toMatchObject({ source: "database" });
+    expect(snapshotStore).not.toHaveBeenCalled();
+    void reader;
+  });
+
+  it("creates an AWS-backed snapshot client from the SDK", async () => {
+    const { createAwsSnapshotObjectClient } = await import("../../src/lib/fallback/aws-snapshot-client");
+    const send = vi.fn().mockResolvedValue({ Body: { transformToString: async () => "{}" } });
+    const client = createAwsSnapshotObjectClient({ send });
+    await client.send({ operation: "get", bucket: "snapshots", key: "public/content.json" });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].input).toMatchObject({ Bucket: "snapshots", Key: "public/content.json" });
+  });
+});
