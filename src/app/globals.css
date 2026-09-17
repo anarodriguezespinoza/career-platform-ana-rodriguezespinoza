@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root { color-scheme: light; --paper: #f8f7f4; --ink: #1f2933; --muted: #5f6b76; --line: #d9d6cf; --accent: #a04a2a; --wash: #eee9df; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; text-decoration: none; }
+@layer components { .page-shell { @apply mx-auto w-full max-w-6xl px-6 sm:px-10; } .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]; } .page-title { @apply mt-4 max-w-4xl font-serif text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl; } .button-primary { @apply inline-flex items-center justify-center bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]; } .button-secondary { @apply inline-flex items-center justify-center border border-[var(--line)] px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]; } .tag { @apply rounded-full bg-[var(--wash)] px-3 py-1 text-xs font-medium text-[var(--muted)]; } }
