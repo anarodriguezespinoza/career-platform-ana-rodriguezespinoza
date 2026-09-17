@@ -23,6 +23,7 @@ describe("public metadata", () => {
       { url: "https://ana.example.com/projects/published-project", changeFrequency: "monthly", priority: 0.7 },
       { url: "https://ana.example.com/skills", changeFrequency: "monthly", priority: 0.8 },
       { url: "https://ana.example.com/resume", changeFrequency: "monthly", priority: 0.8 },
+      { url: "https://ana.example.com/contact", changeFrequency: "monthly", priority: 0.7 },
     ]);
   });
 });

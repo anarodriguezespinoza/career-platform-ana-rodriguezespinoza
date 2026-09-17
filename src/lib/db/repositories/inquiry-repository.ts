@@ -6,6 +6,7 @@ export type CreateInquiryInput = {
   name: string;
   email: string;
   message: string;
+  opportunityType: string;
   source: string;
 };
 
@@ -34,6 +35,10 @@ export class InquiryRepository {
     );
   }
 
+  async findById(id: string): Promise<PrivateInquiry | null> {
+    return this.db.contactInquiry.findUnique({ where: { id } });
+  }
+
   async list(filters: InquiryFilters): Promise<PrivateInquiry[]> {
     return this.db.contactInquiry.findMany({
       where: {
@@ -53,6 +58,15 @@ export class InquiryRepository {
   async updateNotes(id: string, notes: string): Promise<PrivateInquiry> {
     return this.db.$transaction(async (transaction) =>
       transaction.contactInquiry.update({ where: { id }, data: { privateNotes: notes } }),
+    );
+  }
+
+  async updateNotificationStatus(id: string, status: NotificationStatus, error?: string): Promise<PrivateInquiry> {
+    return this.db.$transaction(async (transaction) =>
+      transaction.contactInquiry.update({
+        where: { id },
+        data: { notificationStatus: status, notificationError: error ?? null },
+      }),
     );
   }
 

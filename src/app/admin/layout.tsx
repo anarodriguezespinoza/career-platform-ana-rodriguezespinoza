@@ -11,5 +11,5 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   } catch {
     redirect("/sign-in");
   }
-  return <><header><nav aria-label="Admin navigation"><Link href={"/admin" as never}>Dashboard</Link> · <Link href={"/admin/content" as never}>Content</Link> · <Link href={"/admin/preview" as never}>Preview</Link></nav></header>{children}</>;
+  return <><header><nav aria-label="Admin navigation"><Link href={"/admin" as never}>Dashboard</Link> · <Link href={"/admin/content" as never}>Content</Link> · <Link href={"/admin/preview" as never}>Preview</Link> · <Link href={"/admin/inquiries" as never}>Inquiries</Link></nav></header>{children}</>;
 }

@@ -15,6 +15,7 @@
   "dependencies": {
     "@aws-amplify/ui-react": "^6.11.0",
     "@aws-sdk/client-s3": "^3.1135.0",
+    "@aws-sdk/client-sesv2": "^3.1135.0",
     "@prisma/client": "^6.19.0",
     "@react-pdf/renderer": "^4.3.0",
     "aws-amplify": "^6.15.0",
@@ -31,6 +32,8 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.3",

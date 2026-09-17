@@ -154,6 +154,7 @@ describe("InquiryRepository", () => {
       name: "Visitor",
       email: "visitor@example.com",
       message: "Hello",
+      opportunityType: "PROJECT",
       source: "contact-form",
     };
 
@@ -174,12 +175,14 @@ describe("InquiryRepository", () => {
       name: "First",
       email: "first@example.com",
       message: "First",
+      opportunityType: "PROJECT",
       source: "contact-form",
     });
     const second = await inquiryRepository.create({
       name: "Second",
       email: "second@example.com",
       message: "Second",
+      opportunityType: "OTHER",
       source: "resume",
     });
 

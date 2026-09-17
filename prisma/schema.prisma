@@ -90,10 +90,12 @@ model ContactInquiry {
   name               String
   email              String
   message            String
+  opportunityType    String
   source             String
   privateNotes       String   @default("")
   status             String   @default("NEW")
   notificationStatus String   @default("PENDING")
+  notificationError  String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

@@ -22,7 +22,7 @@ describe("admin route boundary", () => {
     expect(Array.isArray(result.props.children)).toBe(true);
     expect(result.props.children).toContain(children);
     expect(result.props.children[0].props.children.props["aria-label"]).toBe("Admin navigation");
-    expect(result.props.children[0].props.children.props.children).toHaveLength(5);
+    expect(result.props.children[0].props.children.props.children).toHaveLength(7);
     expect(requireAdmin).toHaveBeenCalledWith(expect.any(Request));
     expect(redirect).not.toHaveBeenCalled();
   });
