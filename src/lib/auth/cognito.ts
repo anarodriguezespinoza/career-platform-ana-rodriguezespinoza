@@ -31,6 +31,10 @@ export async function verifyCognitoAccessToken(
       audience: env.cognitoClientId,
     });
 
+    if (payload.token_use !== "id") {
+      throw new AuthenticationError();
+    }
+
     return mapIdentity(payload);
   } catch {
     throw new AuthenticationError();

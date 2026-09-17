@@ -31,8 +31,8 @@ export function SignInForm() {
         password: String(form.get("password") ?? ""),
       });
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
-      if (!token) throw new Error("Missing access token");
+      const token = session.tokens?.idToken?.toString();
+      if (!token) throw new Error("Missing ID token");
       const response = await fetch("/api/auth/session", {
         headers: { Authorization: `Bearer ${token}` },
       });

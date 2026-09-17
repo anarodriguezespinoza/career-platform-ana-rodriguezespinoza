@@ -25,3 +25,12 @@ Implemented Cognito-backed authentication and single-admin authorization for the
 ## Concerns
 
 The full suite requires the repository's SQLite test database to be migrated/seeded before repository tests can pass. This was not changed because it is outside Task 4.
+
+## Review follow-up
+
+- Corrected the Cognito token flow to send and validate the ID token. The verifier now requires Cognito's `token_use: "id"` claim in addition to issuer, client-ID audience, signature, expiry, subject, and email.
+- Added a real Cognito-shaped access-token regression fixture (`token_use: "access"`, `client_id`) to ensure access tokens are rejected by this ID-token boundary.
+- Added `src/app/admin/layout.tsx` as the server-side admin route boundary. It re-runs `requireAdmin` from the HttpOnly session cookie before rendering protected admin content; middleware remains an early redirect only.
+- Added server-boundary tests for authorized rendering and unauthorized redirect.
+
+Follow-up verification: auth tests **12/12 passed** and `npm run typecheck` **passed**.

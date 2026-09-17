@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { verifyCognitoAccessToken } from "../../src/lib/auth/cognito";
 
-async function tokenFor(issuer: string, options: { expiresAt?: string; tokenIssuer?: string } = {}) {
+async function tokenFor(issuer: string, options: { expiresAt?: string; tokenIssuer?: string; tokenUse?: "id" | "access"; audience?: string } = {}) {
   const { privateKey, publicKey } = await generateKeyPair("RS256");
   const publicJwk = await exportJWK(publicKey);
   const kid = `${issuer}-key`;
@@ -14,10 +14,14 @@ async function tokenFor(issuer: string, options: { expiresAt?: string; tokenIssu
     ),
   );
 
-  return new SignJWT({ email: "owner@example.com" })
+  return new SignJWT({
+    email: "owner@example.com",
+    token_use: options.tokenUse ?? "id",
+    ...(options.tokenUse === "access" ? { client_id: "client-id" } : {}),
+  })
     .setProtectedHeader({ alg: "RS256", kid })
     .setIssuer(options.tokenIssuer ?? issuer)
-    .setAudience("client-id")
+    .setAudience(options.audience ?? "client-id")
     .setSubject("owner-subject")
     .setExpirationTime(options.expiresAt ?? "1h")
     .sign(privateKey);
@@ -41,6 +45,14 @@ describe("verifyCognitoAccessToken", () => {
       subject: "owner-subject",
       email: "owner@example.com",
     });
+  });
+
+  it("rejects an access token because it has no ID-token claims", async () => {
+    const issuer = "https://issuer-access-token.example.com";
+    vi.stubEnv("COGNITO_ISSUER", issuer);
+    const token = await tokenFor(issuer, { tokenUse: "access" });
+
+    await expect(verifyCognitoAccessToken(token)).rejects.toMatchObject({ status: 401 });
   });
 
   it("rejects a token signed by an unknown key", async () => {
