@@ -1,0 +1,22 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+        - npx prisma generate
+    build:
+      commands:
+        - if [ "$NODE_ENV" = "production" ] || [ "$AMPLIFY_ENV" = "development" ]; then npx prisma migrate deploy; fi
+        - npm run lint
+        - npm run typecheck
+        - npm test
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
