@@ -1,12 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { hasAdminCredentials, signInAsAdmin } from "./support";
+import { signInAsAdmin } from "./support";
 
 test.describe("admin draft and publishing workflow", () => {
-  test.skip(
-    !hasAdminCredentials,
-    "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run Cognito-backed admin coverage.",
-  );
-
   test("signs in, previews a draft, publishes it, and shows the public result", async ({ page }) => {
     await signInAsAdmin(page);
 

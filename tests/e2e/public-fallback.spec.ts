@@ -1,14 +1,10 @@
 import { test, expect } from "@playwright/test";
 import snapshotFixture from "./fixtures/public-content.json";
-
-const fallbackBaseURL = process.env.E2E_FALLBACK_BASE_URL;
+import { requireFallbackBaseURL } from "./support";
 
 test.describe("public snapshot fallback", () => {
   test("serves the published snapshot when live content is unavailable", async ({ page }) => {
-    test.skip(
-      !fallbackBaseURL,
-      "Set E2E_FALLBACK_BASE_URL to a development deployment with live database reads disabled and a published snapshot configured.",
-    );
+    const fallbackBaseURL = requireFallbackBaseURL();
 
     await page.goto(new URL("/", fallbackBaseURL).toString());
     await expect(page.getByRole("status")).toHaveText(

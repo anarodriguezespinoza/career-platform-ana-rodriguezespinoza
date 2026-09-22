@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { hasAdminCredentials, signInAsAdmin, uniqueInquiryMessage } from "./support";
+import { signInAsAdmin, uniqueInquiryMessage } from "./support";
 
 test.describe("contact inquiry workflow", () => {
   test("submits a contact inquiry with user-visible confirmation", async ({ page }) => {
@@ -17,11 +17,6 @@ test.describe("contact inquiry workflow", () => {
   });
 
   test("allows an admin to view, update, and delete an inquiry", async ({ page }) => {
-    test.skip(
-      !hasAdminCredentials,
-      "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run Cognito-backed admin coverage.",
-    );
-
     const message = uniqueInquiryMessage();
     const response = await page.request.post("/api/contact", {
       data: {

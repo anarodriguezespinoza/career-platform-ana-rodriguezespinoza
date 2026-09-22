@@ -41,6 +41,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: e2e-secret-key
       AWS_EC2_METADATA_DISABLED: true
       AWS_MAX_ATTEMPTS: 1
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_FALLBACK_BASE_URL: ${{ vars.E2E_FALLBACK_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,6 +54,7 @@ jobs:
       - run: npx prisma migrate deploy
       - run: npx prisma db seed
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:preflight
       - run: npm run test:e2e
 
   infrastructure:

@@ -32,3 +32,20 @@ Passed:
 - Local `npm run test:e2e` — 1 public contact scenario passed; 3 scenarios skipped because no development Cognito credentials or fallback deployment were configured.
 
 The credentialed admin flow and live-database-unavailable snapshot flow were not executable in this worktree because no development Cognito account or fallback deployment was available. They remain explicit, opt-in tests rather than silently using production services.
+
+## Review-fix update
+
+The release gate no longer skips admin or snapshot-fallback coverage. `tests/e2e/support.ts` now raises explicit prerequisite errors, and the CI E2E job runs `npm run test:e2e:preflight` with development-only `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, and `E2E_FALLBACK_BASE_URL` values sourced from GitHub Secrets/Variables. If any are absent, the job fails before Playwright instead of passing with skipped scenarios. No credential values are stored in the repository; the expected local configuration is documented in `.env.example`.
+
+Added `tests/e2e/release-checklist.spec.ts` coverage for project 404s, published PDF headers/content, contact validation and rate limiting, and database-backed health. Existing migration and deployment/config tests remain part of the release validation and were rerun. The E2E list now contains 8 scenarios with no skip annotations.
+
+Review-fix validation:
+
+- `npm run test:e2e:preflight` fails clearly when the required admin/fallback configuration is absent (expected local result).
+- `CI=1 DATABASE_URL=file:./dev.db npx playwright test tests/e2e/release-checklist.spec.ts` — 4 passed.
+- `CI=1 npx playwright test --list` — 8 scenarios discovered, none skipped.
+- `npm run lint`, `npm run typecheck`, `npm test` — 24 files, 89 tests, `npm run build` — passed.
+- `npm run build --prefix infra`, `npm test --prefix infra -- tests/infra/cdk-synth.test.ts` — 7 tests passed.
+- Development and production CDK synth — passed.
+
+Credentialed Cognito admin and configured fallback deployment scenarios were not run locally because those development services/credentials are intentionally unavailable. CI now fails explicitly until they are configured.
