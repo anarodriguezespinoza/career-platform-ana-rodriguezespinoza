@@ -7,7 +7,7 @@ frontend:
         - npx prisma generate
     build:
       commands:
-        - if [ "$NODE_ENV" = "production" ] || [ "$AMPLIFY_ENV" = "development" ]; then npx prisma migrate deploy; fi
+        - if [ "${RUN_PRISMA_MIGRATIONS:-false}" = "true" ] && [ -n "${RELEASE_ENVIRONMENT:-}" ] && [ "${RELEASE_ENVIRONMENT}" = "${AMPLIFY_ENV}" ] && [ -n "${RELEASE_BRANCH:-}" ] && [ "${AWS_BRANCH:-}" = "${RELEASE_BRANCH}" ]; then npx prisma migrate deploy; fi
         - npm run lint
         - npm run typecheck
         - npm test

@@ -33,3 +33,20 @@ Implemented and verified AWS CDK infrastructure, environment separation, Amplify
 
 - CDK emits the standard cross-stack-reference strength and feature-flag warnings during synth; synthesis remains successful and no deployment was attempted.
 - SES identity defaults to `owner@example.com` only when no managed `SES_FROM_EMAIL`/`sesFromEmail` value is supplied; deployment environments should set the verified sender identity through managed configuration before deployment.
+
+## Review findings resolved (2026-09-22)
+
+- **Prisma migrations:** Amplify no longer migrates on ordinary builds or pull-request previews. Migrations require managed `RUN_PRISMA_MIGRATIONS=true`, matching `RELEASE_ENVIRONMENT`/`AMPLIFY_ENV`, and matching `RELEASE_BRANCH`/`AWS_BRANCH`. The policy is documented in `README.md` and covered by `tests/infra/amplify-config.test.ts`.
+- **RDS secret access:** The ECS application runtime role from `StorageStack` is passed to `DataStack`, which grants it `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret` for only the generated environment-specific database secret. Synthesis coverage verifies the grant.
+- **SES sender:** The placeholder sender fallback was removed. CDK now requires `-c sesFromEmail=<verified address>` or `SES_FROM_EMAIL`; missing values fail synthesis, including production. Tests cover the failure path.
+
+## Review-fix verification
+
+- `npm --prefix infra run build` — passed.
+- `npm --prefix infra test -- tests/infra/cdk-synth.test.ts tests/infra/amplify-config.test.ts` — passed (9 tests).
+- `npx cdk synth -c environment=development -c sesFromEmail=verified@example.com` — passed.
+- `npx cdk synth -c environment=production -c sesFromEmail=verified@example.com` — passed.
+- `npm run lint` — passed.
+- `npm run typecheck` — passed.
+- `npm test` — passed (89 tests).
+- `npm run build` — passed.

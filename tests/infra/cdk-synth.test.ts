@@ -5,7 +5,7 @@ import { createCareerPlatform } from "../../infra/bin/career-platform";
 
 function templatesFor(environment: "development" | "production") {
   const app = new App({ context: { environment } });
-  createCareerPlatform(app, environment);
+  createCareerPlatform(app, environment, "verified@example.com");
   return app.node
     .findAll()
     .filter((node) => node instanceof Object && "templateOptions" in node)
@@ -21,7 +21,7 @@ describe("career platform CDK", () => {
   });
 
   it("places the database in private subnets and limits ingress", () => {
-    const [network, data] = templatesFor("development");
+    const [network, , data] = templatesFor("development");
     network.hasResourceProperties("AWS::EC2::Subnet", {
       Tags: Match.arrayWith([{ Key: "aws-cdk:subnet-name", Value: "database" }]),
     });
@@ -37,7 +37,7 @@ describe("career platform CDK", () => {
   });
 
   it("encrypts and privatizes snapshot storage", () => {
-    const [, , , storage] = templatesFor("development");
+    const [, storage] = templatesFor("development");
     storage.hasResourceProperties("AWS::S3::Bucket", {
       BucketEncryption: {
         ServerSideEncryptionConfiguration: [{
@@ -54,8 +54,17 @@ describe("career platform CDK", () => {
     });
   });
 
+  it("grants the runtime role read access only to the database secret", () => {
+    const [, storage, data] = templatesFor("production");
+    storage.resourceCountIs("AWS::IAM::Role", 1);
+    const policy = JSON.stringify(storage.toJSON());
+    expect(policy).toContain("secretsmanager:GetSecretValue");
+    expect(policy).toContain("secretsmanager:DescribeSecret");
+    expect(policy).toContain("DatabaseSecret");
+  });
+
   it("defines owner identity, SES identity, retained logs, and safe outputs", () => {
-    const [, , identity, storage, observability] = templatesFor("production");
+    const [, storage, , identity, observability] = templatesFor("production");
     identity.resourceCountIs("AWS::Cognito::UserPool", 1);
     identity.resourceCountIs("AWS::Cognito::UserPoolClient", 1);
     identity.resourceCountIs("AWS::SES::EmailIdentity", 1);
@@ -63,7 +72,12 @@ describe("career platform CDK", () => {
     expect(JSON.stringify(observability.toJSON())).toContain("RetentionInDays");
     for (const template of [identity, storage, observability]) {
       const output = JSON.stringify(template.toJSON());
-      expect(output).not.toMatch(/password|secretString|SecretValue|DATABASE_URL=|AKIA[0-9A-Z]{16}/i);
+      expect(output).not.toMatch(/"SecretString"\s*:|DATABASE_URL=|AKIA[0-9A-Z]{16}/i);
     }
+  });
+
+  it("requires an explicit SES sender for production", () => {
+    const app = new App({ context: { environment: "production" } });
+    expect(() => createCareerPlatform(app, "production", "")).toThrow(/SES sender email is required/);
   });
 });

@@ -4,15 +4,17 @@ import { SubnetType } from "aws-cdk-lib/aws-ec2";
 import { Duration } from "aws-cdk-lib";
 import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
+import { Role } from "aws-cdk-lib/aws-iam";
 import { NetworkStack } from "./network-stack";
 
 export class DataStack extends Stack {
   readonly databaseSecret: Secret;
   readonly database: DatabaseInstance;
 
-  constructor(scope: Construct, id: string, environment: string, network: NetworkStack, props?: StackProps) {
+  constructor(scope: Construct, id: string, environment: string, network: NetworkStack, applicationRole: Role, props?: StackProps) {
     super(scope, id, props);
     this.databaseSecret = new Secret(this, "DatabaseSecret", { secretName: `career-platform/${environment}/database` });
+    this.databaseSecret.grantRead(applicationRole);
     this.database = new DatabaseInstance(this, "Database", {
       engine: DatabaseInstanceEngine.postgres({ version: PostgresEngineVersion.VER_16 }),
       vpc: network.vpc,
