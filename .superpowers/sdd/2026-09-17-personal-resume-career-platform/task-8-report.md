@@ -35,3 +35,15 @@ The admin form action generates the current published PDF after authorization bu
 - `npm test -- tests/resume/resume-data.test.ts tests/resume/generate-pdf.test.ts tests/resume/route.test.ts tests/resume/public-page.test.ts` — passed (8 tests).
 - `npm run typecheck` — passed after the build completed.
 - `npm run build` — passed; Next.js reported the existing multiple-lockfile workspace-root warning.
+
+## Final review follow-up
+
+- Updated the public resume page to prefer `/api/resume` only for complete live database content with both published profile and resume settings.
+- Snapshot content now preserves a working published `resumeUrl`; when no legacy URL exists, the page returns to the existing on-request state instead of exposing a DB-only generated link.
+- Added coverage for live generated-link preference, snapshot legacy fallback, and unavailable resume fallback.
+
+## Final validation
+
+- `npm test -- tests/resume` — passed (4 files, 10 tests).
+- `npm run typecheck` — passed.
+- `npm run build` — passed; Next.js reported the existing multiple-lockfile workspace-root warning.
