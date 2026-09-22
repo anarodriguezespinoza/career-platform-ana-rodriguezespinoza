@@ -32,3 +32,15 @@ Follow-up validation:
 - `npm run typecheck`: passed.
 - `npm run lint`: passed with no ESLint warnings or errors.
 - `npm run build`: passed.
+
+## Review follow-up (2026-09-22): effective health probe bound
+
+- Split the declared 1,500 ms database probe budget between Prisma transaction acquisition (`maxWait = 750 ms`) and execution (`timeout` derived from the shared deadline), preventing the two Prisma budgets from totaling approximately 3 seconds.
+- Added a regression assertion that the effective `maxWait + timeout` transaction budget remains at or below `DATABASE_TIMEOUT_MS` while both portions remain positive.
+
+Validation:
+
+- `npm test -- tests/health/health-route.test.ts tests/observability/logging.test.ts`: 7 tests passed.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with no ESLint warnings or errors.
+- `npm run build`: passed.

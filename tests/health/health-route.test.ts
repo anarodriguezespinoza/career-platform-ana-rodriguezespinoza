@@ -27,7 +27,10 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok", database: "up", publicSource: "database" });
     expect(response.headers.get("x-request-id")).toBe("health-123");
-    expect(transaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ timeout: expect.any(Number) }));
+    const options = transaction.mock.calls[0]?.[1] as { maxWait: number; timeout: number };
+    expect(options.maxWait + options.timeout).toBeLessThanOrEqual(1_500);
+    expect(options.maxWait).toBeGreaterThan(0);
+    expect(options.timeout).toBeGreaterThan(0);
   });
 
   it("logs and returns a generated correlation ID", async () => {

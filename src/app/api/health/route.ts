@@ -10,6 +10,7 @@ export type HealthResponse = {
 };
 
 const DATABASE_TIMEOUT_MS = 1_500;
+const DATABASE_MAX_WAIT_MS = Math.floor(DATABASE_TIMEOUT_MS / 2);
 
 export function GET(request: Request): Promise<Response>;
 export function GET(): Promise<Response>;
@@ -32,9 +33,11 @@ export async function GET(request?: Request): Promise<Response> {
 
 async function probeDatabase(requestId: string): Promise<"up" | "down"> {
   try {
+    const deadline = Date.now() + DATABASE_TIMEOUT_MS;
+    const timeout = Math.max(1, deadline - Date.now() - DATABASE_MAX_WAIT_MS);
     await prisma.$transaction((transactionClient) => transactionClient.$queryRaw`SELECT 1`, {
-      maxWait: DATABASE_TIMEOUT_MS,
-      timeout: DATABASE_TIMEOUT_MS,
+      maxWait: DATABASE_MAX_WAIT_MS,
+      timeout,
     });
     return "up";
   } catch (error) {
