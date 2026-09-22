@@ -21,9 +21,9 @@ describe("getPublishedResumeData", () => {
         id: "profile-1", name: "Ana Rodriguez", headline: "Engineer", summary: "Builder", email: "ana@example.com", location: "Madrid", avatarUrl: null,
         publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date(),
       },
-      experience: [{ id: "exp-published", company: "Acme", role: "Engineer", description: "Built things", startDate: new Date("2022-01-01"), endDate: null, displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date() }],
-      projects: [{ id: "project-published", slug: "public", name: "Public project", description: "Visible", url: "https://example.com", repositoryUrl: null, isFeatured: true, displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date(), technologies: [{ projectId: "project-published", technology: "TypeScript", displayOrder: 0 }] }],
-      skills: [{ id: "skill-published", name: "TypeScript", category: "Languages", displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date() }],
+      experience: [{ id: "exp-draft", company: "Draft Co", role: "Draft role", description: "Draft only", startDate: new Date("2024-01-01"), endDate: null, displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date() }, { id: "exp-published", company: "Acme", role: "Engineer", description: "Built things", startDate: new Date("2022-01-01"), endDate: null, displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date() }],
+      projects: [{ id: "project-draft", slug: "draft", name: "Draft project", description: "Draft only", url: null, repositoryUrl: null, isFeatured: false, displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date(), technologies: [] }, { id: "project-published", slug: "public", name: "Public project", description: "Visible", url: "https://example.com", repositoryUrl: null, isFeatured: true, displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date(), technologies: [{ projectId: "project-published", technology: "TypeScript", displayOrder: 0 }] }],
+      skills: [{ id: "skill-draft", name: "Draft skill", category: "Drafts", displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date() }, { id: "skill-published", name: "TypeScript", category: "Languages", displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date() }],
       resumeSettings: { id: "resume-1", title: "Resume", intro: "Intro", resumeUrl: null, publicationState: "PUBLISHED", updatedAt: new Date() },
     });
 
@@ -31,9 +31,12 @@ describe("getPublishedResumeData", () => {
     const result = await getPublishedResumeData();
 
     expect(result.profile.name).toBe("Ana Rodriguez");
+    expect(result.experience).toHaveLength(1);
     expect(result.experience[0].company).toBe("Acme");
+    expect(result.projects).toHaveLength(1);
     expect(result.projects[0].technologies).toEqual(["TypeScript"]);
     expect(result.skills).toEqual([{ name: "TypeScript", category: "Languages" }]);
+    expect(JSON.stringify(result)).not.toContain("Draft");
     expect(result).not.toHaveProperty("publicationState");
     expect(result).not.toHaveProperty("email");
     expect(JSON.stringify(result)).not.toContain("createdAt");

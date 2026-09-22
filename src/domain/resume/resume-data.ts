@@ -60,20 +60,20 @@ export async function getPublishedResumeData(): Promise<PublishedResumeData> {
       title: content.resumeSettings.title,
       intro: content.resumeSettings.intro,
     },
-    experience: content.experience.map((item) => ({
+    experience: content.experience.filter((item) => item.publicationState === "PUBLISHED").map((item) => ({
       company: item.company,
       role: item.role,
       description: item.description,
       startDate: formatDate(item.startDate),
       endDate: item.endDate ? formatDate(item.endDate) : null,
     })),
-    projects: content.projects.map((item) => ({
+    projects: content.projects.filter((item) => item.publicationState === "PUBLISHED").map((item) => ({
       name: item.name,
       description: item.description,
       url: item.url,
       repositoryUrl: item.repositoryUrl,
       technologies: item.technologies.map((technology) => technology.technology),
     })),
-    skills: content.skills.map((item) => ({ name: item.name, category: item.category })),
+    skills: content.skills.filter((item) => item.publicationState === "PUBLISHED").map((item) => ({ name: item.name, category: item.category })),
   };
 }

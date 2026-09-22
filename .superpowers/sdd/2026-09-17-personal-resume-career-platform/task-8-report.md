@@ -22,3 +22,16 @@ Implemented and verified on `feature/personal-resume-career-platform`.
 ## Concerns
 
 The admin form action generates the current published PDF after authorization but does not persist it; the page links to the public download route for the resulting document. PDF text extraction in tests inflates the renderer's compressed content stream and decodes its hex text operators.
+
+## Review follow-up
+
+- Updated the public `/resume` page to use `/api/resume` as the canonical generated download route; the legacy `resumeUrl` is no longer used for public downloads.
+- Added mixed published/draft fixtures and defensive publication-state filtering in the resume projection. PDF coverage now projects mixed fixtures before rendering and verifies draft content is absent.
+- Added public route tests for successful PDF bytes and `Content-Type`, `Content-Disposition`, and cache headers, plus a 503 response when published data/generation is unavailable.
+- Added a public resume page test asserting the generated endpoint link.
+
+## Review follow-up validation
+
+- `npm test -- tests/resume/resume-data.test.ts tests/resume/generate-pdf.test.ts tests/resume/route.test.ts tests/resume/public-page.test.ts` — passed (8 tests).
+- `npm run typecheck` — passed after the build completed.
+- `npm run build` — passed; Next.js reported the existing multiple-lockfile workspace-root warning.

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { inflateSync } from "node:zlib";
 
+const { listPublished } = vi.hoisted(() => ({ listPublished: vi.fn() }));
+
+vi.mock("../../src/lib/db/repositories/content-repository", () => ({ ContentRepository: class { listPublished = listPublished; } }));
+vi.mock("../../src/lib/db/client", () => ({ prisma: {} }));
+
 const publishedData = {
   profile: { name: "Ana Rodriguez", headline: "Staff Engineer", summary: "Builds reliable products", location: "Madrid" },
   settings: { title: "Ana Rodriguez Resume", intro: "Selected work" },
@@ -24,10 +29,26 @@ describe("generateResumePdf", () => {
     expect(text).toContain("Public Platform");
   });
 
-  it("never receives draft-only content through the published data contract", async () => {
+  it("excludes draft records before rendering the PDF", async () => {
+    listPublished.mockResolvedValue({
+      profile: { id: "profile-1", name: "Ana Rodriguez", headline: "Staff Engineer", summary: "Builds reliable products", email: "private@example.com", location: "Madrid", avatarUrl: null, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date() },
+      resumeSettings: { id: "resume-1", title: "Resume", intro: "Selected work", resumeUrl: null, publicationState: "PUBLISHED", updatedAt: new Date() },
+      experience: [],
+      projects: [
+        { id: "draft-project", slug: "draft", name: "Draft Project", description: "Should not be visible", url: null, repositoryUrl: null, isFeatured: false, displayOrder: 0, publicationState: "DRAFT", createdAt: new Date(), updatedAt: new Date(), technologies: [] },
+        { id: "published-project", slug: "published", name: "Published Project", description: "Should be visible", url: null, repositoryUrl: null, isFeatured: true, displayOrder: 1, publicationState: "PUBLISHED", createdAt: new Date(), updatedAt: new Date(), technologies: [] },
+      ],
+      skills: [],
+    });
+
+    const { getPublishedResumeData } = await import("@/domain/resume/resume-data");
     const { generateResumePdf } = await import("@/domain/resume/generate-pdf");
-    const pdf = await generateResumePdf({ ...publishedData, projects: [] });
-    expect(Buffer.from(pdf).toString("latin1")).not.toContain("Draft Project");
+    const data = await getPublishedResumeData();
+    const pdf = await generateResumePdf(data);
+    const output = Buffer.from(pdf).toString("latin1");
+
+    expect(data.projects.map((project) => project.name)).toEqual(["Published Project"]);
+    expect(output).not.toContain("Draft Project");
   });
 });
 
