@@ -1,0 +1,69 @@
+erDiagram
+  Profile {
+    string id PK
+    string name
+    string headline
+    string summary
+    string email
+    string location
+    string avatarUrl
+    string publicationState
+    datetime createdAt
+    datetime updatedAt
+  }
+  Experience {
+    string id PK
+    string company
+    string role
+    string description
+    datetime startDate
+    datetime endDate
+    int displayOrder
+    string publicationState
+  }
+  Project {
+    string id PK
+    string slug UK
+    string name
+    string description
+    string url
+    string repositoryUrl
+    boolean isFeatured
+    int displayOrder
+    string publicationState
+  }
+  ProjectTechnology {
+    string projectId PK, FK
+    string technology PK
+    int displayOrder
+  }
+  Skill {
+    string id PK
+    string name
+    string category
+    int displayOrder
+    string publicationState
+  }
+  ResumeSettings {
+    string id PK
+    string title
+    string intro
+    string resumeUrl
+    string publicationState
+  }
+  ContactInquiry {
+    string id PK
+    string name
+    string email
+    string message
+    string opportunityType
+    string source
+    string privateNotes
+    string status
+    string notificationStatus
+    string notificationError
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  Project ||--o{ ProjectTechnology : contains
