@@ -49,3 +49,13 @@ Review-fix validation:
 - Development and production CDK synth — passed.
 
 Credentialed Cognito admin and configured fallback deployment scenarios were not run locally because those development services/credentials are intentionally unavailable. CI now fails explicitly until they are configured.
+
+
+## Final review fix
+
+Replaced the rate-limit E2E test's random client IP with the fixed TEST-NET-2 address `198.51.100.42`, making the test identity deterministic and reserved for documentation/examples without relying on randomness or real client addresses.
+
+Focused final-fix validation:
+
+- `CI=1 npx playwright test tests/e2e/release-checklist.spec.ts --list` — 4 tests discovered.
+- `DATABASE_URL=file:./dev.db npx prisma migrate deploy && DATABASE_URL=file:./dev.db npx prisma db seed && CI=1 DATABASE_URL=file:./dev.db npx playwright test tests/e2e/release-checklist.spec.ts` — 4 passed.

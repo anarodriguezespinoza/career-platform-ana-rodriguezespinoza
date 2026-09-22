@@ -23,7 +23,7 @@ test.describe("public release checklist", () => {
     });
     expect(invalid.status()).toBe(400);
 
-    const clientIP = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+    const clientIP = "198.51.100.42";
     const payload = {
       name: "Release Checklist",
       email: "release-checklist@example.com",
