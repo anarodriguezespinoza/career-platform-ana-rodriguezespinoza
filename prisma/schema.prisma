@@ -1,0 +1,104 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Profile {
+  id               String          @id
+  name             String
+  headline         String
+  summary          String
+  email            String
+  location         String
+  avatarUrl        String?
+  publicationState String          @default("DRAFT")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Experience {
+  id               String   @id
+  company          String
+  role             String
+  description      String
+  startDate        DateTime
+  endDate          DateTime?
+  displayOrder     Int      @default(0)
+  publicationState String   @default("DRAFT")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([publicationState, displayOrder, id])
+}
+
+model Project {
+  id               String               @id
+  slug             String               @unique
+  name             String
+  description      String
+  url              String?
+  repositoryUrl    String?
+  isFeatured       Boolean              @default(false)
+  displayOrder     Int                  @default(0)
+  publicationState String               @default("DRAFT")
+  technologies     ProjectTechnology[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([publicationState, displayOrder, id])
+}
+
+model ProjectTechnology {
+  projectId   String
+  technology  String
+  displayOrder Int     @default(0)
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technology])
+  @@index([projectId, displayOrder, technology])
+}
+
+model Skill {
+  id               String   @id
+  name             String
+  category         String
+  displayOrder     Int      @default(0)
+  publicationState String   @default("DRAFT")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([publicationState, displayOrder, id])
+}
+
+model ResumeSettings {
+  id               String   @id
+  title            String
+  intro            String
+  resumeUrl        String?
+  publicationState String   @default("DRAFT")
+  updatedAt        DateTime @updatedAt
+
+  @@index([publicationState, id])
+}
+
+model ContactInquiry {
+  id                 String   @id
+  name               String
+  email              String
+  message            String
+  opportunityType    String
+  source             String
+  privateNotes       String   @default("")
+  status             String   @default("NEW")
+  notificationStatus String   @default("PENDING")
+  notificationError  String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([notificationStatus, createdAt])
+}

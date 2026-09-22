@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-17T00:00:00.000Z",
+  "content": {
+    "profile": {
+      "id": "profile-ana",
+      "name": "Ana Rodriguez Espinoza",
+      "headline": "Software Engineer",
+      "summary": "Building reliable products and thoughtful user experiences.",
+      "email": "ana@example.com",
+      "location": "Remote",
+      "avatarUrl": null
+    },
+    "experience": [],
+    "projects": [],
+    "skills": [],
+    "resumeSettings": {
+      "id": "resume-settings-default",
+      "title": "Ana Rodriguez Espinoza Resume",
+      "intro": "Resume and professional experience.",
+      "resumeUrl": null
+    }
+  }
+}

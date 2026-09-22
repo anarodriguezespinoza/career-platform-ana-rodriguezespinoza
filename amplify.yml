@@ -1,0 +1,22 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+        - npx prisma generate
+    build:
+      commands:
+        - if [ "${RUN_PRISMA_MIGRATIONS:-false}" = "true" ] && [ -n "${RELEASE_ENVIRONMENT:-}" ] && [ "${RELEASE_ENVIRONMENT}" = "${AMPLIFY_ENV}" ] && [ -n "${RELEASE_BRANCH:-}" ] && [ "${AWS_BRANCH:-}" = "${RELEASE_BRANCH}" ]; then npx prisma migrate deploy; fi
+        - npm run lint
+        - npm run typecheck
+        - npm test
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

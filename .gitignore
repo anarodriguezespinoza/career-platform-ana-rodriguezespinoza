@@ -217,5 +217,8 @@ __marimo__/
 # Local Git worktrees
 .worktrees/
 
+# Node dependencies
+node_modules/
+
 # Streamlit
 .streamlit/secrets.toml

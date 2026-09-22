@@ -1,0 +1,7 @@
+import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth/require-admin";
+import { ContentForm } from "@/components/admin/content-form";
+import { PublishControls } from "@/components/admin/publish-controls";
+import { createAdminContentService, type ContentType } from "@/domain/content/admin-service";
+export default async function ContentEditPage({ params }: { params: Promise<{ type: string; id: string }> }) { const token = (await cookies()).get("cognito-access-token")?.value; const actor = await requireAdmin(new Request("https://internal.local/admin", { headers: token ? { cookie: `cognito-access-token=${token}` } : undefined })); const { type, id } = await params; if (!["profile", "experience", "project", "skill", "resumeSettings"].includes(type)) notFound(); const content = await createAdminContentService().previewDraft(actor); const records = type === "profile" ? [content.profile] : type === "experience" ? content.experience : type === "project" ? content.projects : type === "skill" ? content.skills : [content.resumeSettings]; const record = records.find((item) => item?.id === id); if (!record) notFound(); return <main><h1>Edit {type}</h1><ContentForm type={type as ContentType} id={id} initial={record as unknown as Record<string, unknown>} /><PublishControls type={type as ContentType} id={id} state={record?.publicationState} /></main>; }

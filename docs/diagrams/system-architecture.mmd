@@ -1,0 +1,35 @@
+flowchart LR
+  browser[Browser]
+  next[Next.js app\nroute handlers, pages, server actions]
+  cognito[Cognito\nowner identity]
+  prisma[Prisma repositories]
+  rds[(RDS PostgreSQL)]
+  projection[Published public projection\nbuildPublicContent]
+  s3[(Private versioned S3\npublic/content.json)]
+  ses[SES v2]
+  inquiry[ContactInquiry\nprivate data]
+  health[/api/health]
+
+  browser --> next
+  next -. admin token .-> cognito
+  next --> prisma
+  prisma --> rds
+  next --> projection
+  projection --> s3
+  next --> inquiry
+  inquiry --> ses
+  inquiry --> rds
+  health --> prisma
+  health -. database down .-> s3
+  s3 -. validated snapshot .-> next
+
+  subgraph PublicRead[Public read path]
+    projection
+    s3
+  end
+
+  subgraph PrivateWrite[Authenticated/private paths]
+    cognito
+    inquiry
+    ses
+  end
