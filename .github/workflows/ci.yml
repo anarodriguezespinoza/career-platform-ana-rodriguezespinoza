@@ -24,6 +24,35 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: development
+      DATABASE_URL: file:./dev.db
+      COGNITO_ISSUER: http://127.0.0.1:4010
+      COGNITO_CLIENT_ID: e2e-client
+      NEXT_PUBLIC_COGNITO_ISSUER: http://127.0.0.1:4010
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: e2e-client
+      S3_SNAPSHOT_BUCKET: e2e-snapshots
+      SES_FROM_EMAIL: e2e@example.com
+      SES_TO_EMAIL: e2e@example.com
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: e2e-access-key
+      AWS_SECRET_ACCESS_KEY: e2e-secret-key
+      AWS_EC2_METADATA_DISABLED: true
+      AWS_MAX_ATTEMPTS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
   infrastructure:
     runs-on: ubuntu-latest
     steps:
@@ -36,5 +65,5 @@ jobs:
       - run: npm ci --prefix infra
       - run: npm run build --prefix infra
       - run: npm test --prefix infra -- tests/infra/cdk-synth.test.ts
-      - run: npx --prefix infra cdk synth -c environment=development -c sesFromEmail=ci@example.com
-      - run: npx --prefix infra cdk synth -c environment=production -c sesFromEmail=ci@example.com
+      - run: cd infra && npx cdk synth -c environment=development -c sesFromEmail=ci@example.com
+      - run: cd infra && npx cdk synth -c environment=production -c sesFromEmail=ci@example.com

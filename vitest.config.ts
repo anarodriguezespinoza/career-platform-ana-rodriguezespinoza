@@ -7,6 +7,6 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "tests/infra/**", "**/.{idea,git,cache,output,temp}/**"],
+    exclude: ["**/node_modules/**", "tests/infra/**", "tests/e2e/**", "**/.{idea,git,cache,output,temp}/**"],
   },
 });
