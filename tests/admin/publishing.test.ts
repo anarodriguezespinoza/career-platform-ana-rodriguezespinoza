@@ -45,8 +45,12 @@ describe("admin publishing", () => {
   it("publishes in a transaction and refreshes the snapshot only after commit", async () => {
     const { service, repository, snapshot, order } = setup();
 
-    await expect(service.publishContent(actor)).resolves.toMatchObject({ published: true });
+    const { logger } = await import("../../src/lib/observability/logger");
+    const info = vi.spyOn(logger, "info");
+    await expect(service.publishContent(actor, "admin-request-1")).resolves.toMatchObject({ published: true });
     expect(repository.setPublicationState).toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith("admin_content_operation", expect.objectContaining({ requestId: "admin-request-1" }));
+    info.mockRestore();
     expect(order).toEqual(["transaction", "snapshot"]);
   });
 

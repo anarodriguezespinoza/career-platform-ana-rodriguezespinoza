@@ -36,16 +36,16 @@ function requireActor(actor: AdminIdentity | null): AdminIdentity {
   return actor;
 }
 
-function withDatabaseError<T>(operation: () => Promise<T>, operationName: string): Promise<T> {
+function withDatabaseError<T>(operation: () => Promise<T>, operationName: string, requestId?: string): Promise<T> {
   return operation().catch((error) => {
     if (error instanceof AdminOperationError || error instanceof AuthenticationError) throw error;
-    logger.error("admin_content_operation_failed", { operation: operationName, errorType: error instanceof Error ? error.name : "unknown" });
+    logger.error("admin_content_operation_failed", { operation: operationName, requestId, errorType: error instanceof Error ? error.name : "unknown" });
     throw new AdminOperationError("TEMPORARY_DATABASE_ERROR", "The database is temporarily unavailable");
   });
 }
 
-function logOperation(actor: AdminIdentity, operation: string, type?: ContentType, id?: string) {
-  logger.info("admin_content_operation", { actorSubject: actor.subject, operation, type, id });
+function logOperation(actor: AdminIdentity, operation: string, type?: ContentType, id?: string, requestId?: string) {
+  logger.info("admin_content_operation", { actorSubject: actor.subject, operation, type, id, requestId });
 }
 
 export class AdminContentService {
@@ -54,25 +54,25 @@ export class AdminContentService {
     private readonly snapshotStore?: SnapshotStore,
   ) {}
 
-  async saveDraft(input: SaveDraftInput, actor: AdminIdentity | null): Promise<EditableContent> {
+  async saveDraft(input: SaveDraftInput, actor: AdminIdentity | null, requestId?: string): Promise<EditableContent> {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
       const result = await this.repository.saveDraft(validateDraftInput(input));
-      logOperation(identity, "save_draft", input.type, input.id);
+      logOperation(identity, "save_draft", input.type, input.id, requestId);
       return result;
-    }, "save_draft");
+    }, "save_draft", requestId);
   }
 
-  async previewDraft(actor: AdminIdentity | null): Promise<PreviewContent> {
+  async previewDraft(actor: AdminIdentity | null, requestId?: string): Promise<PreviewContent> {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
       const result = await this.repository.getDraftContent();
-      logOperation(identity, "preview_draft");
+      logOperation(identity, "preview_draft", undefined, undefined, requestId);
       return result;
-    }, "preview_draft");
+    }, "preview_draft", requestId);
   }
 
-  async publishContent(actor: AdminIdentity | null): Promise<PublishResult> {
+  async publishContent(actor: AdminIdentity | null, requestId?: string): Promise<PublishResult> {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
       const published = await this.repository.transaction(async (transactionRepository) => {
@@ -84,20 +84,20 @@ export class AdminContentService {
         return buildPublicContent(publishableContent);
       });
       const snapshotRefreshed = await this.refreshSnapshot(published);
-      logOperation(identity, "publish");
+      logOperation(identity, "publish", undefined, undefined, requestId);
       return { published: true, snapshotRefreshed };
-    }, "publish");
+    }, "publish", requestId);
   }
 
-  unpublishRecord(type: ContentType, id: string, actor: AdminIdentity | null): Promise<void> {
-    return this.changeState(type, id, PublicationState.DRAFT, actor, "unpublish");
+  unpublishRecord(type: ContentType, id: string, actor: AdminIdentity | null, requestId?: string): Promise<void> {
+    return this.changeState(type, id, PublicationState.DRAFT, actor, "unpublish", requestId);
   }
 
-  archiveRecord(type: ContentType, id: string, actor: AdminIdentity | null): Promise<void> {
-    return this.changeState(type, id, PublicationState.ARCHIVED, actor, "archive");
+  archiveRecord(type: ContentType, id: string, actor: AdminIdentity | null, requestId?: string): Promise<void> {
+    return this.changeState(type, id, PublicationState.ARCHIVED, actor, "archive", requestId);
   }
 
-  private async changeState(type: ContentType, id: string, state: string, actor: AdminIdentity | null, operation: string) {
+  private async changeState(type: ContentType, id: string, state: string, actor: AdminIdentity | null, operation: string, requestId?: string) {
     const identity = requireActor(actor);
     return withDatabaseError(async () => {
       const content = await this.repository.transaction(async (transactionRepository) => {
@@ -105,8 +105,8 @@ export class AdminContentService {
         return transactionRepository.getDraftContent();
       });
       await this.refreshSnapshot(buildPublicContent(content));
-      logOperation(identity, operation, type, id);
-    }, operation);
+      logOperation(identity, operation, type, id, requestId);
+    }, operation, requestId);
   }
 
   private async refreshSnapshot(content: ReturnType<typeof buildPublicContent>): Promise<boolean> {

@@ -19,3 +19,16 @@
 
 - Next reports existing workspace-root warnings because both the repository and feature worktree have lockfiles; this does not affect lint or build success.
 - `next lint` reports the existing Next.js deprecation notice and recommends migration to the ESLint CLI.
+
+## Review follow-up (2026-09-22)
+
+- Replaced the health endpoint's non-cancelling `Promise.race` timeout with Prisma interactive-transaction `maxWait` and `timeout` controls, so the database probe is bounded by the client/database operation itself and creates no application timer requiring cleanup.
+- Added request correlation to `GET /api/health` and `GET /api/resume`: incoming `x-request-id` is honored, otherwise a UUID is generated; the ID is returned in `x-request-id` response headers and included in route-scoped warnings/errors.
+- Propagated generated correlation IDs through admin content service operations and added correlation-aware server-action logs for content, inquiry, and resume admin actions.
+
+Follow-up validation:
+
+- `npm test -- tests/health/health-route.test.ts tests/observability/logging.test.ts`: 7 tests passed.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with no ESLint warnings or errors.
+- `npm run build`: passed.

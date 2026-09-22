@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db/client";
 import { requireAdmin, type AdminIdentity } from "@/lib/auth/require-admin";
 import { InquiryStatus } from "@/lib/db/types";
 import { deleteInquiry as deleteInquiryService } from "@/domain/inquiries/service";
+import { createRequestContext } from "@/lib/observability/request-context";
+import { logger } from "@/lib/observability/logger";
 
 async function adminIdentity(): Promise<AdminIdentity> {
   const token = (await cookies()).get("cognito-access-token")?.value;
@@ -16,7 +18,9 @@ async function adminIdentity(): Promise<AdminIdentity> {
 const repository = () => new InquiryRepository(prisma);
 
 export async function updateInquiryStatus(id: string, status: InquiryStatus) {
-  await adminIdentity();
+  const requestId = createRequestContext().requestId;
+  const actor = await adminIdentity();
+  logger.info("admin_server_action", { operation: "update_inquiry_status", inquiryId: id, actorSubject: actor.subject, requestId });
   if (!Object.values(InquiryStatus).includes(status)) throw new Error("Invalid inquiry status");
   await repository().updateStatus(id, status);
   revalidatePath("/admin/inquiries");
@@ -24,12 +28,17 @@ export async function updateInquiryStatus(id: string, status: InquiryStatus) {
 }
 
 export async function updateInquiryNotes(id: string, notes: string) {
-  await adminIdentity();
+  const requestId = createRequestContext().requestId;
+  const actor = await adminIdentity();
+  logger.info("admin_server_action", { operation: "update_inquiry_notes", inquiryId: id, actorSubject: actor.subject, requestId });
   await repository().updateNotes(id, notes);
   revalidatePath(`/admin/inquiries/${id}`);
 }
 
 export async function deleteInquiry(id: string) {
-  await deleteInquiryService(id, await adminIdentity());
+  const requestId = createRequestContext().requestId;
+  const actor = await adminIdentity();
+  logger.info("admin_server_action", { operation: "delete_inquiry", inquiryId: id, actorSubject: actor.subject, requestId });
+  await deleteInquiryService(id, actor);
   revalidatePath("/admin/inquiries");
 }
