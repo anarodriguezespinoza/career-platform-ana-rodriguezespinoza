@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "../../src/lib/observability/logger";
 
 const { create, updateNotificationStatus, sendInquiryNotification } = vi.hoisted(() => ({
   create: vi.fn(),
@@ -55,4 +56,16 @@ describe("submitInquiry", () => {
     await expect(submitInquiry(input, { clientIdentity: "client-1" })).rejects.toBeInstanceOf(RateLimitError);
     expect(create).toHaveBeenCalledTimes(3);
   });
+});
+
+
+it("logs notification failures without logging the inquiry message", async () => {
+  const log = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+  sendInquiryNotification.mockRejectedValue(new Error("SES unavailable"));
+
+  await submitInquiry(input, { clientIdentity: "client-1", requestId: "req-1" });
+
+  expect(log).toHaveBeenCalledWith("inquiry_notification_failed", expect.objectContaining({ inquiryId: "inquiry-1", requestId: "req-1" }));
+  expect(JSON.stringify(log.mock.calls)).not.toContain(input.message);
+  log.mockRestore();
 });

@@ -25,7 +25,7 @@ describe("POST /api/contact", () => {
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ message: "Thanks. Your message has been received." });
-    expect(submitInquiry).toHaveBeenCalledWith(expect.anything(), { clientIdentity: "203.0.113.10" });
+    expect(submitInquiry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ clientIdentity: "203.0.113.10", requestId: expect.any(String) }));
   });
 
   it("returns generic public errors for invalid input and rate limits", async () => {

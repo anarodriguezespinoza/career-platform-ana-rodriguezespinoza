@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { logger } from "../../src/lib/observability/logger";
 
 import {
   AdminContentService,
@@ -133,3 +134,15 @@ describe("admin publishing", () => {
 
     expect(snapshot.write).toHaveBeenCalledWith(expect.objectContaining({ content: expect.objectContaining({ profile: null }) }));
   });
+
+
+it("logs publish failures without exposing error details", async () => {
+  const log = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+  const { service, repository } = setup();
+  vi.mocked(repository.setPublicationState).mockRejectedValueOnce(new Error("database password=secret"));
+
+  await expect(service.publishContent(actor)).rejects.toMatchObject({ code: "TEMPORARY_DATABASE_ERROR" });
+  expect(log).toHaveBeenCalledWith("admin_content_operation_failed", expect.objectContaining({ operation: "publish" }));
+  expect(JSON.stringify(log.mock.calls)).not.toContain("database password=secret");
+  log.mockRestore();
+});

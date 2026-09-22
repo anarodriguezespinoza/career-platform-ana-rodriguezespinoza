@@ -4,6 +4,12 @@ export type PublicContentSourceEvent =
   | { event: "public_content_fallback"; source: "snapshot" };
 export type SourceLogger = (event: PublicContentSourceEvent) => void;
 
-export function logSourceStatus(event: PublicContentSourceEvent, logger: SourceLogger = console.info): void {
-  logger(event);
+import { logger as structuredLogger } from "@/lib/observability/logger";
+
+export function logSourceStatus(event: PublicContentSourceEvent, logger?: SourceLogger): void {
+  if (logger) {
+    logger(event);
+    return;
+  }
+  structuredLogger.info(event.event, { source: event.source });
 }

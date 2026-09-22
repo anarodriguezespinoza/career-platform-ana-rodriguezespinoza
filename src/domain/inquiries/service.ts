@@ -4,10 +4,12 @@ import { sendInquiryNotification } from "@/lib/email/ses";
 import type { AdminIdentity } from "@/lib/auth/require-admin";
 import { inquiryRateLimiter } from "./rate-limit";
 import type { ContactInput } from "./validation";
+import { logger } from "@/lib/observability/logger";
 
 export type RequestContext = {
   clientIdentity: string;
   source?: string;
+  requestId?: string;
 };
 
 export type SubmissionResult = {
@@ -38,7 +40,7 @@ export async function submitInquiry(input: ContactInput, context: RequestContext
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown notification failure";
     await repository.updateNotificationStatus(inquiry.id, "FAILED", errorMessage);
-    console.error("Inquiry notification failed", { inquiryId: inquiry.id, error: errorMessage });
+    logger.error("inquiry_notification_failed", { inquiryId: inquiry.id, requestId: context.requestId, errorType: error instanceof Error ? error.name : "unknown" });
     return { accepted: true, notificationStatus: "FAILED" };
   }
 }

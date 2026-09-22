@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { logger } from "../../src/lib/observability/logger";
 
 import {
   createSnapshot,
@@ -212,4 +213,13 @@ describe("snapshot service", () => {
       ),
     ).rejects.toBeInstanceOf(PublicContentUnavailableError);
   });
+});
+
+
+it("logs database fallback failures without logging database details", async () => {
+  const log = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+  await expect(readPublicContent(async () => { throw new Error("DATABASE_URL=secret"); }, { read: async () => null, write: async () => undefined })).rejects.toBeInstanceOf(PublicContentUnavailableError);
+  expect(log).toHaveBeenCalledWith("public_content_database_unavailable", expect.anything());
+  expect(JSON.stringify(log.mock.calls)).not.toContain("DATABASE_URL=secret");
+  log.mockRestore();
 });

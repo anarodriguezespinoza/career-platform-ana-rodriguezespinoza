@@ -6,6 +6,7 @@ import { createSnapshot } from "@/lib/fallback/snapshot-schema";
 import type { SnapshotStore } from "@/lib/fallback/snapshot-store";
 import { buildPublicContent, validatePublishableContent } from "./publication";
 import type { EditableContent } from "./types";
+import { logger } from "@/lib/observability/logger";
 
 export type ContentType = "profile" | "experience" | "project" | "skill" | "resumeSettings";
 export type SaveDraftInput = {
@@ -35,15 +36,16 @@ function requireActor(actor: AdminIdentity | null): AdminIdentity {
   return actor;
 }
 
-function withDatabaseError<T>(operation: () => Promise<T>): Promise<T> {
+function withDatabaseError<T>(operation: () => Promise<T>, operationName: string): Promise<T> {
   return operation().catch((error) => {
     if (error instanceof AdminOperationError || error instanceof AuthenticationError) throw error;
+    logger.error("admin_content_operation_failed", { operation: operationName, errorType: error instanceof Error ? error.name : "unknown" });
     throw new AdminOperationError("TEMPORARY_DATABASE_ERROR", "The database is temporarily unavailable");
   });
 }
 
 function logOperation(actor: AdminIdentity, operation: string, type?: ContentType, id?: string) {
-  console.info("admin_content_operation", { actorSubject: actor.subject, operation, type, id });
+  logger.info("admin_content_operation", { actorSubject: actor.subject, operation, type, id });
 }
 
 export class AdminContentService {
@@ -58,7 +60,7 @@ export class AdminContentService {
       const result = await this.repository.saveDraft(validateDraftInput(input));
       logOperation(identity, "save_draft", input.type, input.id);
       return result;
-    });
+    }, "save_draft");
   }
 
   async previewDraft(actor: AdminIdentity | null): Promise<PreviewContent> {
@@ -67,7 +69,7 @@ export class AdminContentService {
       const result = await this.repository.getDraftContent();
       logOperation(identity, "preview_draft");
       return result;
-    });
+    }, "preview_draft");
   }
 
   async publishContent(actor: AdminIdentity | null): Promise<PublishResult> {
@@ -84,7 +86,7 @@ export class AdminContentService {
       const snapshotRefreshed = await this.refreshSnapshot(published);
       logOperation(identity, "publish");
       return { published: true, snapshotRefreshed };
-    });
+    }, "publish");
   }
 
   unpublishRecord(type: ContentType, id: string, actor: AdminIdentity | null): Promise<void> {
@@ -104,7 +106,7 @@ export class AdminContentService {
       });
       await this.refreshSnapshot(buildPublicContent(content));
       logOperation(identity, operation, type, id);
-    });
+    }, operation);
   }
 
   private async refreshSnapshot(content: ReturnType<typeof buildPublicContent>): Promise<boolean> {
