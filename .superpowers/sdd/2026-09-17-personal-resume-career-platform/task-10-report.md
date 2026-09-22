@@ -50,3 +50,13 @@ Implemented and verified AWS CDK infrastructure, environment separation, Amplify
 - `npm run typecheck` — passed.
 - `npm test` — passed (89 tests).
 - `npm run build` — passed.
+
+## Remaining review issue resolved (2026-09-22)
+
+- **README deploy context:** Development and production CDK deploy examples now explicitly export a verified `SES_FROM_EMAIL` and pass `-c sesFromEmail="$SES_FROM_EMAIL"`. This matches the CDK entrypoint's required context and prevents deploy commands from failing due to a missing SES sender.
+
+## Final docs/synth verification
+
+- README command inspection confirmed both deploy examples include `-c sesFromEmail="$SES_FROM_EMAIL"`.
+- `npx cdk synth -c environment=development -c sesFromEmail=verified-development@example.com` — passed.
+- `npx cdk synth -c environment=production -c sesFromEmail=verified-production@example.com` — passed.
