@@ -2,24 +2,28 @@
 
 ## Prerequisites
 
-- Node.js 22, npm, AWS CLI, and an authenticated AWS principal with permission to bootstrap/deploy CDK and inspect RDS, S3, Cognito, SES, CloudWatch, Secrets Manager, and Amplify.
+- Python 3.12+ (3.13 is used in CI and the container), Docker, Node.js 22 and npm (for CDK and the Tailwind CSS build only), AWS CLI, and an authenticated AWS principal with permission to bootstrap/deploy CDK and inspect RDS, S3, Cognito, SES, CloudWatch, Secrets Manager, and the container runtime.
 - A verified SES sender identity in the target AWS account/region.
 - An AWS account and region selected through `CDK_DEFAULT_ACCOUNT` and `CDK_DEFAULT_REGION` (or the normal CDK environment configuration).
-- A development or production Amplify app connected to this repository.
-- Production secrets managed by Amplify environment variables, AWS Secrets Manager, or another approved secret manager. Do not commit them or place them in `.env.example`.
+- A container runtime for the application image. ECS Fargate is the intended target: the CDK `ApplicationRole` already trusts `ecs-tasks.amazonaws.com` and grants the snapshot S3 access. The CDK app does not yet define the compute service itself.
+- Production secrets injected from AWS Secrets Manager (or another approved secret manager) as container environment variables. Do not commit them or place them in `.env.example`.
 
 ## Local application configuration
 
-Copy `.env.example` to `.env.local` and fill development-only values:
+Copy `.env.example` to `.env` and fill development-only values, then:
 
 ```bash
-cp .env.example .env.local
-npm ci
-npx prisma generate
-npm run dev
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+set -a && source .env && set +a
+alembic upgrade head
+python -m app.seed
+uvicorn app.main:app --reload
 ```
 
-The runtime requires `DATABASE_URL`, `COGNITO_ISSUER`, `COGNITO_CLIENT_ID`, `S3_SNAPSHOT_BUCKET`, `SES_FROM_EMAIL`, and `SES_TO_EMAIL`. `S3_SNAPSHOT_KEY` defaults to `public/content.json` in the snapshot reader. Admin access additionally requires `COGNITO_ADMIN_SUBJECT` or at least one address in `COGNITO_ADMIN_EMAILS`.
+The runtime requires `DATABASE_URL`, `COGNITO_ISSUER`, `COGNITO_CLIENT_ID`, `S3_SNAPSHOT_BUCKET`, `SES_FROM_EMAIL`, and `SES_TO_EMAIL`. `DATABASE_URL` accepts SQLAlchemy URLs as well as the earlier `file:` and `postgresql://` forms. `S3_SNAPSHOT_KEY` defaults to `public/content.json`. `SITE_URL` sets canonical URLs, `robots.txt`, and the sitemap. `APP_ENV=production` marks the session cookie `Secure`. Admin access additionally requires `COGNITO_ADMIN_SUBJECT` or at least one address in `COGNITO_ADMIN_EMAILS`, and the Cognito app client must allow the `USER_SRP_AUTH` flow (the CDK `WebClient` does).
+
+Styles are Tailwind classes in the Jinja templates, compiled into the committed `app/static/css/site.css`. After changing classes, run `./scripts/build-css.sh`; CI fails if the compiled file is stale.
 
 ## CDK bootstrap and deployment
 
@@ -46,26 +50,32 @@ cd infra && npx cdk deploy --all -c environment=production -c sesFromEmail="$SES
 
 Review the synthesized template before deployment. `DataStack` creates private encrypted PostgreSQL with generated Secrets Manager credentials; `StorageStack` creates a private versioned encrypted bucket and the `public/content.json` key; `IdentityStack` creates the owner Cognito pool/client and SES identity; `ObservabilityStack` creates application, audit, and health log groups. Capture stack outputs for the managed application configuration, but never print or commit secret values.
 
-## Amplify setup and migration gate
+## Application image and release migrations
 
-In Amplify, connect the repository and configure the build from the checked-in `amplify.yml`. Set these managed variables for the selected environment: `DATABASE_URL`, `COGNITO_ISSUER`, `COGNITO_CLIENT_ID`, `COGNITO_ADMIN_SUBJECT` and/or `COGNITO_ADMIN_EMAILS`, `S3_SNAPSHOT_BUCKET`, `S3_SNAPSHOT_KEY`, `SES_FROM_EMAIL`, and `SES_TO_EMAIL`. Also set `AMPLIFY_ENV` to `development` or `production`.
+Build and push the image from the repository root:
 
-The build always runs `npm ci`, `npx prisma generate`, lint, typecheck, tests, and `npm run build`. Prisma migration deployment is disabled by default. Enable it only on the approved release branch by setting all of the following in managed configuration:
-
-```text
-RUN_PRISMA_MIGRATIONS=true
-RELEASE_ENVIRONMENT=<development-or-production>
-RELEASE_BRANCH=<approved-release-branch>
+```bash
+docker build -t career-platform:<revision> .
 ```
 
-The gate runs `npx prisma migrate deploy` only if `RELEASE_ENVIRONMENT = AMPLIFY_ENV` and `AWS_BRANCH = RELEASE_BRANCH`. Pull-request previews and ordinary branch builds therefore cannot migrate an environment accidentally. The migration command uses the same managed `DATABASE_URL` as the application.
+The image runs `uvicorn app.main:app` on port 8000 as a non-root user, trusting `X-Forwarded-*` headers from the load balancer. Configure these environment variables on the service, with credentials sourced from Secrets Manager: `APP_ENV`, `SITE_URL`, `DATABASE_URL`, `COGNITO_ISSUER`, `COGNITO_CLIENT_ID`, `COGNITO_ADMIN_SUBJECT` and/or `COGNITO_ADMIN_EMAILS`, `S3_SNAPSHOT_BUCKET`, `S3_SNAPSHOT_KEY`, `SES_FROM_EMAIL`, and `SES_TO_EMAIL`. Run the task with the CDK `ApplicationRole` so S3 access stays scoped to the snapshot key. Point the load balancer health check at `/api/health`.
+
+### Release migrations
+
+Containers never migrate on start-up. For each approved release, run the migration once as a one-off task from the same image and with the same `DATABASE_URL` as the application, before shifting traffic:
+
+```bash
+docker run --rm -e DATABASE_URL="$DATABASE_URL" career-platform:<revision> alembic upgrade head
+```
+
+Pull-request and preview environments must not be given production database credentials, so they cannot migrate a release database accidentally. For a database that Prisma previously managed, run `alembic stamp 0001` once instead (see [database](database.md#migration-workflow)).
 
 ## Health verification
 
 After deployment and after migrations, verify the deployed origin:
 
 ```bash
-curl --fail-with-body -sS -D - https://<amplify-domain>/api/health
+curl --fail-with-body -sS -D - https://<app-domain>/api/health
 ```
 
 A healthy response is HTTP 200 with `{"status":"ok","database":"up","publicSource":"database"}`. During an RDS outage, HTTP 200 with `{"status":"degraded","database":"down","publicSource":"snapshot"}` means public read-only content can continue from the last validated snapshot. HTTP 503 with `{"status":"unavailable","database":"down","publicSource":"none"}` means neither source is available; stop traffic changes and begin recovery. Also exercise a public page, the resume route, owner sign-in, and (in development) a contact submission without exposing inquiry contents in logs.
@@ -90,14 +100,14 @@ aws s3api copy-object \
   --key "$S3_SNAPSHOT_KEY" \
   --content-type application/json \
   --metadata-directive COPY
-curl --fail-with-body -sS https://<amplify-domain>/api/health
+curl --fail-with-body -sS https://<app-domain>/api/health
 ```
 
-Only restore an object that passes the schema used by `src/lib/fallback/snapshot-schema.ts`. Snapshot recovery restores public read availability; it does not restore drafts, inquiries, or database writes. Once RDS is healthy, republish from the database to generate a fresh schema version 2 snapshot.
+Only restore an object that passes the schema enforced by `parse_snapshot()` in `app/domain/snapshot.py`. Snapshot recovery restores public read availability; it does not restore drafts, inquiries, or database writes. Once RDS is healthy, republish from the database to generate a fresh schema version 2 snapshot.
 
 ## Database recovery and rollback
 
-Before destructive changes, preserve the latest RDS automated/manual snapshot and the S3 snapshot. Prefer a forward Prisma migration over rollback. If an applied migration is unsafe, do not edit its SQL or run `prisma migrate resolve` as a shortcut. Restore the RDS snapshot to an isolated instance, validate migrations and application behavior there, then update the managed database secret/`DATABASE_URL` through the approved release process:
+Before destructive changes, preserve the latest RDS automated/manual snapshot and the S3 snapshot. Prefer a forward Alembic migration over rollback. If an applied migration is unsafe, do not edit it or `alembic stamp` past it as a shortcut. Restore the RDS snapshot to an isolated instance, validate migrations and application behavior there, then update the managed database secret/`DATABASE_URL` through the approved release process:
 
 ```bash
 aws rds describe-db-snapshots --db-instance-identifier <instance-id>
@@ -108,13 +118,13 @@ aws rds restore-db-instance-from-db-snapshot \
 aws rds wait db-instance-available --db-instance-identifier career-platform-recovery
 ```
 
-Do not expose the recovery endpoint publicly until security groups, backups, migrations, and health checks have been verified. After changing the managed connection value, redeploy the approved application revision, run `npx prisma migrate deploy` only through the release gate, verify `/api/health`, then verify public content and owner/admin access. Production RDS has deletion protection, encrypted storage, retained snapshots, and a 14-day backup retention policy in `infra/lib/data-stack.ts`.
+Do not expose the recovery endpoint publicly until security groups, backups, migrations, and health checks have been verified. After changing the managed connection value, redeploy the approved application revision, run `alembic upgrade head` only as the release migration step, verify `/api/health`, then verify public content and owner/admin access. Production RDS has deletion protection, encrypted storage, retained snapshots, and a 14-day backup retention policy in `infra/lib/data-stack.ts`.
 
 ## Operational references
 
-- Application checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
-- Infrastructure checks: `npm run build --prefix infra`, `npm test --prefix infra -- tests/infra/cdk-synth.test.ts tests/infra/amplify-config.test.ts`.
+- Application checks: `ruff check app tests e2e migrations`, `pytest`, and `pytest e2e` for the release gate (requires `pip install -e ".[e2e]"`, `playwright install chromium`, and the `E2E_*` variables).
+- Infrastructure checks: `npm run build --prefix infra`, `npm test --prefix infra`.
 - CI definition: `.github/workflows/ci.yml`.
-- Amplify definition and migration gate: `amplify.yml`.
+- Container definition: `Dockerfile`.
 - CDK entrypoint and stacks: `infra/bin/career-platform.ts`, `infra/lib/`.
-- Schema and migration history: `prisma/schema.prisma`, `prisma/migrations/`.
+- Models and migration history: `app/models.py`, `migrations/versions/`.

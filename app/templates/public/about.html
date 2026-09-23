@@ -1,0 +1,13 @@
+{% extends "public/layout.html" %}
+{% set profile = content.profile %}
+{% block content %}
+<div class="max-w-3xl">
+  <p class="eyebrow">About</p>
+  <h1 class="page-title">A practical idealist who likes making complex things clear.</h1>
+  <p class="mt-8 text-xl leading-9 text-[var(--muted)]">{{ profile.summary if profile else "Professional summary unavailable." }}</p>
+  <dl class="mt-12 grid gap-8 border-t border-[var(--line)] pt-8 sm:grid-cols-2">
+    <div><dt class="eyebrow">Location</dt><dd class="mt-2 text-lg">{{ profile.location if profile else "Available remotely" }}</dd></div>
+    <div><dt class="eyebrow">Contact</dt><dd class="mt-2 text-lg">{% set email = profile.email if profile and profile.email else "hello@example.com" %}<a class="text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-4" href="mailto:{{ email }}">{{ email }}</a></dd></div>
+  </dl>
+</div>
+{% endblock %}

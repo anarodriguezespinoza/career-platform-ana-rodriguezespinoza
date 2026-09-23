@@ -1,0 +1,12 @@
+{% extends "public/layout.html" %}
+{% set resume = content.resume_settings %}
+{% block content %}
+<p class="eyebrow">Resume</p>
+<h1 class="page-title">{{ resume.title if resume else "Resume" }}</h1>
+<p class="mt-8 max-w-2xl text-xl leading-9 text-[var(--muted)]">{{ resume.intro if resume else (content.profile.summary if content.profile else "A concise overview of my experience and skills.") }}</p>
+{% if download_url %}
+<a href="{{ download_url }}" class="button-primary mt-10 inline-flex">Download resume</a>
+{% else %}
+<p class="mt-10 text-sm text-[var(--muted)]">A downloadable resume is available on request.</p>
+{% endif %}
+{% endblock %}

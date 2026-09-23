@@ -1,0 +1,26 @@
+{% extends "admin/layout.html" %}
+{% block title %}Inquiries — Admin{% endblock %}
+{% block content %}
+<p class="eyebrow">Admin</p>
+<h1 class="page-title">Inquiries</h1>
+{% if not inquiries %}
+<p class="mt-8 text-[var(--muted)]">No inquiries yet.</p>
+{% else %}
+<div class="mt-8 overflow-x-auto">
+  <table class="w-full border-collapse text-left text-sm">
+    <thead><tr class="border-b border-[var(--line)]"><th class="p-3">Received</th><th class="p-3">Name</th><th class="p-3">Opportunity</th><th class="p-3">Status</th><th class="p-3">Notification</th></tr></thead>
+    <tbody>
+      {% for inquiry in inquiries %}
+      <tr class="border-b border-[var(--line)]">
+        <td class="p-3">{{ inquiry.created_at | datetime }}</td>
+        <td class="p-3"><a class="underline" href="/admin/inquiries/{{ inquiry.id }}">{{ inquiry.name }}</a><div class="text-[var(--muted)]">{{ inquiry.email }}</div></td>
+        <td class="p-3">{{ inquiry.opportunity_type }}</td>
+        <td class="p-3">{{ inquiry.status }}</td>
+        <td class="p-3">{{ inquiry.notification_status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

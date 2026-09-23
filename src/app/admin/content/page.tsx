@@ -1,5 +1,0 @@
-import Link from "next/link";
-import { createAdminContentService } from "@/domain/content/admin-service";
-import { cookies } from "next/headers";
-import { requireAdmin } from "@/lib/auth/require-admin";
-export default async function ContentPage() { const token = (await cookies()).get("cognito-access-token")?.value; const actor = await requireAdmin(new Request("https://internal.local/admin", { headers: token ? { cookie: `cognito-access-token=${token}` } : undefined })); const data = await createAdminContentService().previewDraft(actor); const groups = [["profile", data.profile], ["experience", data.experience], ["project", data.projects], ["skill", data.skills], ["resumeSettings", data.resumeSettings]] as const; return <main><h1>Content drafts</h1>{groups.map(([type, records]) => <section key={type}><h2>{type}</h2>{(Array.isArray(records) ? records : records ? [records] : []).map((record) => <Link key={record.id} href={`/admin/content/${type}/${record.id}` as never}>{record.id} ({record.publicationState})</Link>)}</section>)}</main>; }

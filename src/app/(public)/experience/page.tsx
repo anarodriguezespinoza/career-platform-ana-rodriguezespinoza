@@ -1,6 +1,0 @@
-import { SourceStatus } from "../../../components/public/source-status";
-import { getPublicContent } from "../../../lib/public/content";
-import { metadataFor } from "../../../lib/public/metadata";
-export const metadata = metadataFor({ title: "Experience — Ana Rodriguez", description: "Professional experience and career history for Ana Rodriguez.", path: "/experience" });
-const date = (value: Date | string) => new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(value));
-export default async function ExperiencePage() { const { content, source } = await getPublicContent(); return <div className="page-shell py-16 sm:py-24"><SourceStatus source={source} /><p className="eyebrow">Experience</p><h1 className="page-title">A career built around useful outcomes.</h1><ol className="mt-14 space-y-10">{content.experience.map((item) => <li className="grid gap-4 border-t border-[var(--line)] pt-6 md:grid-cols-[180px_1fr]" key={item.id}><p className="font-mono text-xs uppercase tracking-wider text-[var(--muted)]">{date(item.startDate)} — {item.endDate ? date(item.endDate) : "Present"}</p><div><h2 className="font-serif text-2xl font-semibold">{item.role}</h2><p className="mt-1 font-medium text-[var(--accent)]">{item.company}</p><p className="mt-4 max-w-2xl leading-8 text-[var(--muted)]">{item.description}</p></div></li>)}</ol></div>; }

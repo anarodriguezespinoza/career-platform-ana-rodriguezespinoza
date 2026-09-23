@@ -1,0 +1,11 @@
+{% extends "admin/layout.html" %}
+{% block title %}Admin — Ana Rodriguez{% endblock %}
+{% block content %}
+<p class="eyebrow">Admin</p>
+<h1 class="page-title">Admin</h1>
+<p class="mt-6 max-w-2xl text-lg text-[var(--muted)]">Edit drafts under <a class="underline" href="/admin/content">Content</a>, check them in <a class="underline" href="/admin/preview">Preview</a>, then publish every non-archived record at once.</p>
+<form method="post" action="/admin/publish" class="mt-8">
+  <button class="button-primary" type="submit">Publish all drafts</button>
+</form>
+{% include "admin/_status.html" %}
+{% endblock %}

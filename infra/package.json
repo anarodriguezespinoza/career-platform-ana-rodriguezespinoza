@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc --noEmit",
-    "test": "vitest run --root .. --config infra/vitest.config.ts",
+    "test": "vitest run --config vitest.config.ts",
     "cdk": "cdk"
   },
   "dependencies": {

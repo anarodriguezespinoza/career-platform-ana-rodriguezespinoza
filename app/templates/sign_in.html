@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Ana Rodriguez{% endblock %}
+{% set field_class = "border border-[var(--line)] bg-white px-4 py-3 font-normal" %}
+{% block body %}
+<main class="page-shell py-16 sm:py-24">
+  <p class="eyebrow">Admin</p>
+  <h1 class="page-title">Sign in</h1>
+  <p class="mt-6 text-lg text-[var(--muted)]">Sign in to manage your professional portfolio.</p>
+  <form class="mt-10 grid max-w-md gap-6" method="post" action="/sign-in">
+    <input type="hidden" name="returnTo" value="{{ return_to }}">
+    <label class="grid gap-2 text-sm font-semibold">Email<input class="{{ field_class }}" name="email" type="email" autocomplete="email" required value="{{ email | default('') }}"></label>
+    <label class="grid gap-2 text-sm font-semibold">Password<input class="{{ field_class }}" name="password" type="password" autocomplete="current-password" required></label>
+    {% if error %}<p role="alert" class="text-sm text-[var(--accent)]">{{ error }}</p>{% endif %}
+    <button class="button-primary justify-self-start" type="submit">Sign in</button>
+  </form>
+</main>
+{% endblock %}

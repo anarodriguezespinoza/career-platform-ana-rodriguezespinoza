@@ -1,0 +1,29 @@
+{% extends "admin/layout.html" %}
+{% block title %}Inquiry — Admin{% endblock %}
+{% set field_class = "border border-[var(--line)] px-3 py-2 font-normal" %}
+{% block content %}
+<p class="eyebrow">Inquiry</p>
+<h1 class="page-title">{{ inquiry.name }}</h1>
+<dl class="mt-8 grid gap-4">
+  <div><dt class="font-semibold">Email</dt><dd><a class="underline" href="mailto:{{ inquiry.email }}">{{ inquiry.email }}</a></dd></div>
+  <div><dt class="font-semibold">Opportunity</dt><dd>{{ inquiry.opportunity_type }}</dd></div>
+  <div><dt class="font-semibold">Received</dt><dd>{{ inquiry.created_at | datetime }}</dd></div>
+  <div><dt class="font-semibold">Message</dt><dd class="whitespace-pre-wrap">{{ inquiry.message }}</dd></div>
+  <div><dt class="font-semibold">Notification</dt><dd>{{ inquiry.notification_status }}{% if inquiry.notification_error %} — {{ inquiry.notification_error }}{% endif %}</dd></div>
+</dl>
+<form class="mt-8 flex gap-3" method="post" action="/admin/inquiries/{{ inquiry.id }}/status">
+  <label class="grid gap-2 font-semibold" for="status">Status
+    <select class="{{ field_class }}" id="status" name="status">
+      {% for status in statuses %}<option{% if status == inquiry.status %} selected{% endif %}>{{ status }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="button-secondary self-end" type="submit">Update status</button>
+</form>
+<form class="mt-8 grid max-w-2xl gap-3" method="post" action="/admin/inquiries/{{ inquiry.id }}/notes">
+  <label class="grid gap-2 font-semibold" for="privateNotes">Private notes<textarea class="min-h-32 {{ field_class }}" id="privateNotes" name="privateNotes">{{ inquiry.private_notes }}</textarea></label>
+  <button class="button-secondary justify-self-start" type="submit">Save notes</button>
+</form>
+<form class="mt-8" method="post" action="/admin/inquiries/{{ inquiry.id }}/delete" onsubmit="return window.confirm('Delete this inquiry permanently?')">
+  <button class="button-secondary" type="submit">Delete inquiry</button>
+</form>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "public/layout.html" %}
+{% block content %}
+<a href="/projects" class="text-sm font-semibold text-[var(--accent)]">← Back to projects</a>
+<article class="mt-12 max-w-3xl">
+  <p class="eyebrow">Project</p>
+  <h1 class="page-title">{{ project.name }}</h1>
+  <p class="mt-8 text-xl leading-9 text-[var(--muted)]">{{ project.description }}</p>
+  <div class="mt-10 flex flex-wrap gap-2">
+    {% for technology in project.technologies %}<span class="tag">{{ technology.technology }}</span>{% endfor %}
+  </div>
+  <div class="mt-12 flex flex-wrap gap-5 text-sm font-semibold">
+    {% if project.url %}<a class="text-[var(--accent)] underline underline-offset-4" href="{{ project.url }}" rel="noreferrer">Visit project ↗</a>{% endif %}
+    {% if project.repository_url %}<a class="text-[var(--accent)] underline underline-offset-4" href="{{ project.repository_url }}" rel="noreferrer">View source ↗</a>{% endif %}
+  </div>
+</article>
+{% endblock %}

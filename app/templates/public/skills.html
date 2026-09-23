@@ -1,0 +1,15 @@
+{% extends "public/layout.html" %}
+{% block content %}
+<p class="eyebrow">Skills</p>
+<h1 class="page-title">Tools are means, not the point.</h1>
+<div class="mt-14 grid gap-10 sm:grid-cols-2">
+  {% for category, skills in groups.items() %}
+  <section class="border-t border-[var(--line)] pt-5">
+    <h2 class="font-serif text-2xl font-semibold">{{ category }}</h2>
+    <ul class="mt-5 space-y-3 text-[var(--muted)]">
+      {% for skill in skills %}<li>{{ skill.name }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

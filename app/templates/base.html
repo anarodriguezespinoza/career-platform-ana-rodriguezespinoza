@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% set meta = meta | default(DEFAULT_META) %}
+  <title>{% block title %}{{ meta.title }}{% endblock %}</title>
+  <meta name="description" content="{{ meta.description }}">
+  {% if meta.canonical_url %}
+  <link rel="canonical" href="{{ meta.canonical_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ meta.title }}">
+  <meta property="og:description" content="{{ meta.description }}">
+  <meta property="og:url" content="{{ meta.canonical_url }}">
+  <meta property="og:site_name" content="{{ meta.site_name }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ meta.title }}">
+  <meta name="twitter:description" content="{{ meta.description }}">
+  {% endif %}
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/site.css') }}">
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>
