@@ -1,0 +1,21 @@
+{% extends "public/layout.html" %}
+{% set field_class = "border border-[var(--line)] bg-white px-4 py-3 font-normal" %}
+{% block content %}
+<p class="eyebrow">Contact</p>
+<h1 class="page-title">Let’s make something useful.</h1>
+<p class="mt-8 max-w-2xl text-xl leading-9 text-[var(--muted)]">Tell me what you are working on, what you need, or where you see an opportunity to collaborate.</p>
+<form class="mt-10 grid max-w-2xl gap-6" method="post" action="/contact">
+  <label class="grid gap-2 text-sm font-semibold" for="name">Name<input class="{{ field_class }}" id="name" name="name" required maxlength="120" value="{{ values.name }}"></label>
+  <label class="grid gap-2 text-sm font-semibold" for="email">Email<input class="{{ field_class }}" id="email" name="email" type="email" required maxlength="254" value="{{ values.email }}"></label>
+  <label class="grid gap-2 text-sm font-semibold" for="opportunityType">What brings you here?
+    <select class="{{ field_class }}" id="opportunityType" name="opportunityType">
+      {% for value, label in opportunity_types %}<option value="{{ value }}"{% if value == (values.opportunityType or "PROJECT") %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="grid gap-2 text-sm font-semibold" for="message">Message<textarea class="min-h-40 {{ field_class }}" id="message" name="message" required maxlength="5000">{{ values.message }}</textarea></label>
+  <div class="flex items-center gap-4">
+    <button class="button-primary" type="submit">Send message</button>
+    {% if message %}<p aria-live="polite" role="status" class="{{ 'text-sm text-green-700' if status == 'success' else 'text-sm text-[var(--accent)]' }}">{{ message }}</p>{% endif %}
+  </div>
+</form>
+{% endblock %}

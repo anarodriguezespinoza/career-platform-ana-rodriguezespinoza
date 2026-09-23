@@ -1,8 +1,8 @@
 # Database and privacy model
 
-## Prisma models
+## Models
 
-The schema is `prisma/schema.prisma`; migrations live in `prisma/migrations/` and are applied in order.
+The SQLAlchemy models are in `app/models.py`; Alembic migrations live in `migrations/versions/` and are applied in order. Table and column names (for example `"Project"."repositoryUrl"`) are unchanged from the earlier Prisma schema, so existing databases remain compatible.
 
 | Model | Purpose and important fields | Relationships / indexes |
 | --- | --- | --- |
@@ -23,28 +23,30 @@ Content models use the exact string states `DRAFT`, `PUBLISHED`, and `ARCHIVED`.
 - Saving a draft upserts the record and forces `DRAFT`.
 - Publishing validates the would-be public content in a transaction, changes every non-archived content record to `PUBLISHED`, and refreshes the snapshot.
 - Unpublishing changes a record to `DRAFT`; archiving changes it to `ARCHIVED`. Archived records remain available to the owner but are excluded from the public view.
-- `buildPublicContent()` is the privacy boundary. It filters to `PUBLISHED`, orders records deterministically, and omits publication state, `createdAt`, and `updatedAt` from public content. The public profile intentionally includes its public contact email, but `ContactInquiry` is never part of `PublicContent`.
+- `build_public_content()` is the privacy boundary. It filters to `PUBLISHED`, orders records deterministically, and omits publication state, `createdAt`, and `updatedAt` from public content. The public profile intentionally includes its public contact email, but `ContactInquiry` is never part of `PublicContent`.
 
 The snapshot schema mirrors this public projection exactly: it contains only `profile`, `experience`, `projects` (including public technology rows), `skills`, and `resumeSettings`. It never contains drafts, archived records, private notes, notification errors, or inquiry messages.
 
 ## Access boundaries
 
 - **Public browser:** receives `PublicContent` from the live database or validated S3 snapshot.
-- **Owner/admin:** reaches draft content and inquiries only through Cognito-authenticated middleware and `requireAdmin()`. The allow-list is configured by `COGNITO_ADMIN_SUBJECT` or `COGNITO_ADMIN_EMAILS`.
-- **Application runtime:** uses Prisma for RDS and a least-privilege S3 role for the single snapshot object. Database credentials come from the environment/secret manager.
+- **Owner/admin:** reaches draft content and inquiries only through Cognito-authenticated admin routes guarded by `require_admin()`. The allow-list is configured by `COGNITO_ADMIN_SUBJECT` or `COGNITO_ADMIN_EMAILS`.
+- **Application runtime:** uses SQLAlchemy for RDS and a least-privilege S3 role for the single snapshot object. Database credentials come from the environment/secret manager.
 - **SES:** receives only the fields needed to notify the owner (`id`, name, email, message, opportunity type). SES is not a source of truth.
 
 ## Manual deletion policy
 
-Inquiry deletion is an explicit owner action in `src/app/admin/inquiries/actions.ts`. It requires Cognito authorization, deletes exactly the selected `ContactInquiry` by ID, and revalidates the admin list. There is no public deletion endpoint, cascade from content records, or automatic purge in the application. Operators must follow the organization's retention and legal requirements before deleting; the deletion is permanent at the application level.
+Inquiry deletion is an explicit owner action (`POST /admin/inquiries/{id}/delete` in `app/routes/admin.py`), confirmed in the browser. It requires Cognito authorization and deletes exactly the selected `ContactInquiry` by ID. There is no public deletion endpoint, cascade from content records, or automatic purge in the application. Operators must follow the organization's retention and legal requirements before deleting; the deletion is permanent at the application level.
 
 ## Migration workflow
 
-1. Edit `prisma/schema.prisma` and create a named migration locally with `npx prisma migrate dev --name <change>` after validating the local database.
-2. Review the generated SQL and run `npx prisma generate`.
-3. Run the application checks (`npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`) before release.
-4. Apply committed migrations to a deployed database with `npx prisma migrate deploy`. The Amplify build runs this command only when `RUN_PRISMA_MIGRATIONS=true`, `RELEASE_ENVIRONMENT` equals `AMPLIFY_ENV`, and `AWS_BRANCH` equals the explicitly configured `RELEASE_BRANCH`.
-5. Preview builds and ordinary builds do not migrate. Never use `prisma db push` against RDS and never edit an applied migration in place.
+1. Change `app/models.py`, then create a named revision with `alembic revision --autogenerate -m "<change>"` against an up-to-date local database.
+2. Review the generated revision in `migrations/versions/` (autogenerate is a starting point, not a guarantee), and keep `tests/test_migrations.py` passing: it checks that the migrated schema matches the models.
+3. Run the application checks (`ruff check app tests e2e migrations` and `pytest`) before release.
+4. Apply committed migrations to a deployed database with `alembic upgrade head`, run as an explicit release step with the same `DATABASE_URL` as the application (see [deployment](deployment.md#release-migrations)). Application containers never migrate on start-up.
+5. Never edit an applied revision in place.
+
+**Databases created by Prisma:** the first Alembic revision (`0001`) is the same schema the Prisma migrations produced. On such a database, run `alembic stamp 0001` once instead of `alembic upgrade`, then continue normally. The leftover `_prisma_migrations` table is unused and can be dropped. Local SQLite files created by Prisma stored timestamps as integers; recreate them with `alembic upgrade head && python -m app.seed` rather than reusing them.
 
 For a failed production migration, stop the release, preserve the RDS snapshot, and prefer a forward migration. If restoration is necessary, restore a snapshot to an isolated instance, validate the application against it, then change the managed `DATABASE_URL`; do not put a replacement credential in Git. See [deployment recovery](deployment.md#database-recovery-and-rollback).
 

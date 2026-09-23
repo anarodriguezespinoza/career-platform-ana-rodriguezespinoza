@@ -1,8 +1,8 @@
 flowchart LR
   browser[Browser]
-  next[Next.js app\nroute handlers, pages, server actions]
+  next[FastAPI app\nroutes, Jinja templates, admin forms]
   cognito[Cognito\nowner identity]
-  prisma[Prisma repositories]
+  prisma[SQLAlchemy repositories]
   rds[(RDS PostgreSQL)]
   projection[Published public projection\nbuildPublicContent]
   s3[(Private versioned S3\npublic/content.json)]

@@ -13,26 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check app tests e2e migrations
+      - run: pytest
+      - name: Compiled CSS is up to date
+        run: ./scripts/build-css.sh && git diff --exit-code app/static/css/site.css
+      - run: docker build -t career-platform .
 
   e2e:
     runs-on: ubuntu-latest
     env:
-      NODE_ENV: development
-      DATABASE_URL: file:./dev.db
-      COGNITO_ISSUER: http://127.0.0.1:4010
-      COGNITO_CLIENT_ID: e2e-client
-      NEXT_PUBLIC_COGNITO_ISSUER: http://127.0.0.1:4010
-      NEXT_PUBLIC_COGNITO_CLIENT_ID: e2e-client
+      APP_ENV: development
+      DATABASE_URL: sqlite:///./e2e.db
+      COGNITO_ISSUER: ${{ vars.E2E_COGNITO_ISSUER }}
+      COGNITO_CLIENT_ID: ${{ vars.E2E_COGNITO_CLIENT_ID }}
+      COGNITO_ADMIN_EMAILS: ${{ secrets.E2E_ADMIN_EMAIL }}
       S3_SNAPSHOT_BUCKET: e2e-snapshots
       SES_FROM_EMAIL: e2e@example.com
       SES_TO_EMAIL: e2e@example.com
@@ -46,16 +45,15 @@ jobs:
       E2E_FALLBACK_BASE_URL: ${{ vars.E2E_FALLBACK_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx prisma migrate deploy
-      - run: npx prisma db seed
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e:preflight
-      - run: npm run test:e2e
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[e2e]"
+      - run: alembic upgrade head
+      - run: python -m app.seed
+      - run: playwright install --with-deps chromium
+      - run: pytest e2e
 
   infrastructure:
     runs-on: ubuntu-latest
@@ -65,9 +63,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+          cache-dependency-path: infra/package-lock.json
       - run: npm ci --prefix infra
       - run: npm run build --prefix infra
-      - run: npm test --prefix infra -- tests/infra/cdk-synth.test.ts
+      - run: npm test --prefix infra
       - run: cd infra && npx cdk synth -c environment=development -c sesFromEmail=ci@example.com
       - run: cd infra && npx cdk synth -c environment=production -c sesFromEmail=ci@example.com

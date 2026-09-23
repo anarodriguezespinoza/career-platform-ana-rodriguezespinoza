@@ -1,0 +1,12 @@
+{% extends "admin/layout.html" %}
+{% block title %}Resume PDF — Admin{% endblock %}
+{% block content %}
+<p class="eyebrow">Admin</p>
+<h1 class="page-title">Resume PDF</h1>
+<p class="mt-6 text-lg text-[var(--muted)]">Generate the current resume from published content only.</p>
+<form method="post" action="/admin/resume" class="mt-8">
+  <button class="button-primary" type="submit">Generate published resume</button>
+</form>
+{% include "admin/_status.html" %}
+<p class="mt-8"><a class="underline" href="/api/resume">Download the public resume</a></p>
+{% endblock %}

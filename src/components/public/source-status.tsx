@@ -1,1 +1,0 @@
-export function SourceStatus({ source }: { source: "database" | "snapshot" }) { if (source !== "snapshot") return null; return <p role="status" className="border-l-2 border-[var(--accent)] bg-[var(--wash)] px-4 py-3 text-sm text-[var(--muted)]">Showing the latest published information while live updates are temporarily unavailable.</p>; }

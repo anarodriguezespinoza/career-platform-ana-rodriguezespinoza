@@ -1,0 +1,9 @@
+{% extends "public/layout.html" %}
+{% block content %}
+<p class="eyebrow">Projects</p>
+<h1 class="page-title">Selected work, with the context left in.</h1>
+<p class="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">A selection of products, platforms, and experiments shaped by curiosity and care.</p>
+<div class="mt-14 grid gap-5 md:grid-cols-2">
+  {% for project in content.projects %}{% include "public/_project_card.html" %}{% endfor %}
+</div>
+{% endblock %}

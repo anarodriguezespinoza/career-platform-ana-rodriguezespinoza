@@ -1,1 +1,0 @@
-export function SiteFooter() { return <footer className="mt-20 border-t border-[var(--line)] py-8 text-sm text-[var(--muted)]"><div className="page-shell flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><span>© {new Date().getFullYear()} Ana Rodriguez</span><span>Built with care and intention.</span></div></footer>; }

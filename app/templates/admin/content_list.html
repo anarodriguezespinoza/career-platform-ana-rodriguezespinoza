@@ -1,0 +1,21 @@
+{% extends "admin/layout.html" %}
+{% block title %}Content drafts — Admin{% endblock %}
+{% set type_labels = {"profile": "Profile", "experience": "Experience", "project": "Projects", "skill": "Skills", "resumeSettings": "Resume settings"} %}
+{% block content %}
+<p class="eyebrow">Admin</p>
+<h1 class="page-title">Content drafts</h1>
+<div class="mt-10 grid gap-10 sm:grid-cols-2">
+  {% for content_type, records in groups %}
+  <section class="border-t border-[var(--line)] pt-5">
+    <h2 class="font-serif text-2xl font-semibold">{{ type_labels[content_type] }}</h2>
+    <ul class="mt-4 space-y-2">
+      {% for record in records %}
+      <li><a class="underline underline-offset-4" href="/admin/content/{{ content_type }}/{{ record.id }}">{{ record.id }} ({{ record.publication_state }})</a></li>
+      {% else %}
+      <li class="text-[var(--muted)]">No records.</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

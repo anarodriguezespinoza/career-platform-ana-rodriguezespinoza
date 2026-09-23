@@ -1,0 +1,31 @@
+{% extends "public/layout.html" %}
+{% set profile = content.profile %}
+{% block content %}
+<section class="grid gap-12 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+  <div>
+    <p class="eyebrow">Software engineer · Product thinker</p>
+    <h1 class="mt-5 max-w-4xl font-serif text-5xl font-semibold leading-[1.02] tracking-tight text-[var(--ink)] sm:text-7xl">{{ profile.name if profile else "Ana Rodriguez" }}<span class="text-[var(--accent)]">.</span></h1>
+    <p class="mt-8 max-w-2xl text-xl leading-9 text-[var(--muted)]">{{ profile.headline if profile else "Building thoughtful digital products for people and teams." }}</p>
+    <div class="mt-8 flex flex-wrap gap-4">
+      <a href="/projects" class="button-primary">View selected work</a>
+      <a href="/about" class="button-secondary">More about me</a>
+    </div>
+  </div>
+  <div class="border-l-2 border-[var(--accent)] pl-6 text-lg leading-8 text-[var(--muted)]">
+    <p>{{ profile.summary if profile else "A portfolio of experience, projects, and skills." }}</p>
+    {% if profile and profile.location %}<p class="mt-5 text-sm uppercase tracking-[0.18em] text-[var(--ink)]">Based in {{ profile.location }}</p>{% endif %}
+  </div>
+</section>
+<section class="mt-16">
+  <div class="mb-8 flex items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Selected work</p>
+      <h2 class="mt-2 font-serif text-3xl font-semibold">A few things I’ve built</h2>
+    </div>
+    <a href="/projects" class="text-sm font-semibold text-[var(--accent)]">All projects →</a>
+  </div>
+  <div class="grid gap-5 md:grid-cols-2">
+    {% for project in content.projects[:4] %}{% include "public/_project_card.html" %}{% endfor %}
+  </div>
+</section>
+{% endblock %}

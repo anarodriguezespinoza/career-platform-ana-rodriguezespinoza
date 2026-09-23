@@ -1,0 +1,31 @@
+{% extends "admin/layout.html" %}
+{% block title %}Edit {{ content_type }} — Admin{% endblock %}
+{% set field_class = "border border-[var(--line)] bg-white px-3 py-2 font-normal" %}
+{% set labels = {"avatarUrl": "Avatar URL", "startDate": "Start date", "endDate": "End date", "displayOrder": "Display order", "repositoryUrl": "Repository URL", "isFeatured": "Featured", "resumeUrl": "Resume URL", "url": "URL", "technologies": "Technologies (comma-separated)"} %}
+{% block content %}
+<p class="eyebrow">Edit {{ content_type }}</p>
+<h1 class="page-title">{{ record.id }}</h1>
+<p class="mt-4 text-sm text-[var(--muted)]">State: {{ record.publication_state }}</p>
+{% include "admin/_status.html" %}
+<form method="post" action="/admin/content/{{ content_type }}/{{ record.id }}" class="mt-8 grid max-w-2xl gap-5">
+  {% for name, _attribute, kind, required in fields %}
+  {% set label = labels.get(name, name[:1] | upper ~ name[1:]) %}
+  {% if kind == "bool" %}
+  <label class="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" name="{{ name }}"{% if values[name] %} checked{% endif %}>{{ label }}</label>
+  {% elif kind == "textarea" %}
+  <label class="grid gap-2 text-sm font-semibold">{{ label }}<textarea class="min-h-32 {{ field_class }}" name="{{ name }}"{% if required %} required{% endif %}>{{ values[name] }}</textarea></label>
+  {% else %}
+  <label class="grid gap-2 text-sm font-semibold">{{ label }}<input class="{{ field_class }}" name="{{ name }}" value="{{ values[name] }}"{% if kind == "date" %} type="date"{% elif kind == "int" %} type="number" min="0"{% endif %}{% if required %} required{% endif %}></label>
+  {% endif %}
+  {% endfor %}
+  <button class="button-primary justify-self-start" type="submit">Save draft</button>
+</form>
+<div class="mt-10 flex flex-wrap gap-3 border-t border-[var(--line)] pt-6">
+  {% if record.publication_state == "PUBLISHED" %}
+  <form method="post" action="/admin/content/{{ content_type }}/{{ record.id }}/unpublish"><button class="button-secondary" type="submit">Unpublish</button></form>
+  {% endif %}
+  {% if record.publication_state != "ARCHIVED" %}
+  <form method="post" action="/admin/content/{{ content_type }}/{{ record.id }}/archive"><button class="button-secondary" type="submit">Archive</button></form>
+  {% endif %}
+</div>
+{% endblock %}
