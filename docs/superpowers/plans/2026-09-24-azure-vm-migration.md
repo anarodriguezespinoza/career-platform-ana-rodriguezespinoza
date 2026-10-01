@@ -248,12 +248,16 @@ One caveat on what "shows your data" can prove right now: the laptop's own `dev.
 - **Check:** `ps aux | grep uvicorn` shows no matching process; `curl -s localhost:8000/api/health` fails to connect.
 - **Undo:** re-run the `nohup uv run uvicorn …` command from step 7.1.
 
+**Result (2026-09-30):** performed in the prior turn, ahead of formally starting this section. First attempt (`pgrep -f 'uvicorn app.main:app' | xargs kill`) matched and killed its own invoking shell too (the shell's own command line contained the search pattern), exiting SSH with 255; a follow-up connection confirmed the uvicorn process was in fact already gone — `pgrep -af uvicorn` found nothing, `ss -tlnp 'sport = :8000'` showed nothing listening.
+
 ### 9.2 Close the port you opened in 7.2 (recommended)
 - **Where:** Azure Portal or laptop (`az` CLI)
 - **Run:** delete the `Allow-8000-Verify` NSG rule (see 7.2 for the exact command/portal path).
 - **Why:** NSG rules are billed at $0 but remain a standing exposure — port 8000 stays open to the internet even while the VM is deallocated and restarted later, unless removed.
 - **Check:** `az network nsg rule list --resource-group rg-career-platform --nsg-name <nsg-name> -o table` no longer lists `Allow-8000-Verify`.
 - **Undo:** re-create it with the command in 7.2.
+
+**Result (2026-09-30): not applicable.** 7.2 was never performed in this session (confirmed earlier — the NSG only ever had the SSH rule), so there was no `Allow-8000-Verify` rule to remove. Before deallocating, listed the NSG's full inbound rule set to confirm nothing resembling a port-8000 rule exists under any name, including `Temp-HTTP-8000` (asked about separately, not something this plan or session created): `az network nsg rule list -g rg-career-platform --nsg-name vm-career-platform-nsg -o table` returned exactly one rule — `Allow-SSH-Laptop` (TCP/22, scoped to the laptop's IP). Also confirmed via `az network nsg list` that `vm-career-platform-nsg` is the only NSG in the resource group, so there's no second NSG hiding an extra rule. `Temp-HTTP-8000` does not exist.
 
 ### 9.3 Deallocate the VM
 - **Where:** laptop (`az` CLI) or Azure Portal
@@ -265,6 +269,8 @@ One caveat on what "shows your data" can prove right now: the laptop's own `dev.
 - **Why:** this is the actual cost control — a running VM bills for compute whether or not uvicorn is up; only "deallocated" stops that meter. Disk storage still bills while deallocated.
 - **Check:** `az vm show -d -g rg-career-platform -n vm-career-platform --query "powerState" -o tsv` reports `VM deallocated`.
 - **Undo:** `az vm start -g rg-career-platform -n vm-career-platform` — note the public IP may change on restart unless it was allocated as static; re-check with `az vm show -d ... --query publicIps` before reconnecting.
+
+**Result (2026-09-30):** `az vm deallocate -g rg-career-platform -n vm-career-platform` completed. `az vm show -d ... --query "powerState"` → `VM deallocated`. Compute billing stopped; disk storage continues to bill while deallocated, per the step's own note.
 
 ---
 
