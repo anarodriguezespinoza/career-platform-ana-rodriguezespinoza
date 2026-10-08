@@ -70,6 +70,16 @@ docker run --rm -e DATABASE_URL="$DATABASE_URL" career-platform:<revision> alemb
 
 Pull-request and preview environments must not be given production database credentials, so they cannot migrate a release database accidentally. For a database that Prisma previously managed, run `alembic stamp 0001` once instead (see [database](database.md#migration-workflow)).
 
+## Railway
+
+`railway.json` configures the Railway web service: it builds this `Dockerfile`, runs `alembic upgrade head` as the pre-deploy command (the release migration step above, run once per deploy before traffic shifts), and health-checks `/api/health`. The container listens on Railway's `$PORT` (default `8000`). Set three variables on the web service:
+
+- `DATABASE_URL=${{Postgres.DATABASE_URL}}`, a reference to the Railway Postgres service, resolved to its private-network URL
+- `APP_ENV=production`
+- `SITE_URL=https://<service-domain>` (no trailing slash)
+
+Cognito, S3, and SES variables are intentionally unset on Railway, so admin sign-in, snapshot publishing, and inquiry email notifications are unavailable. Contact submissions are still stored, with `notificationStatus=FAILED`. To move rows from an earlier SQLite database, run `python -m app.copy_database SOURCE_URL TARGET_URL` against an already-migrated, empty target.
+
 ## Health verification
 
 After deployment and after migrations, verify the deployed origin:
