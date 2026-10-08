@@ -12,4 +12,4 @@ COPY migrations ./migrations
 USER app
 EXPOSE 8000
 # Migrations are a separate, explicit release step: `docker run <image> alembic upgrade head`
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
