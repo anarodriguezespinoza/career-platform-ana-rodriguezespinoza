@@ -5,10 +5,11 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
-from app.copy_database import TargetNotEmptyError, coerce_timestamp, copy_database
+from app.copy_database import TargetNotEmptyError, coerce_timestamp, copy_database, main
 from app.db import build_engine
 
 POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
@@ -90,6 +91,31 @@ def test_copy_database_refuses_non_empty_target(source_url, tmp_path):
     with Session(engine) as session:
         assert session.scalar(select(func.count()).select_from(models.ContactInquiry)) == 0
     engine.dispose()
+
+
+def test_copy_failure_does_not_reveal_inquiry_contents(tmp_path, capsys):
+    source_url = f"sqlite:///{tmp_path / 'loose.db'}"
+    engine = build_engine(source_url)
+    models.Base.metadata.create_all(engine, tables=[t for t in models.Base.metadata.sorted_tables if t.name != "ContactInquiry"])
+    with engine.begin() as conn:
+        columns = ", ".join(f'"{c.name}"' for c in models.ContactInquiry.__table__.columns)
+        conn.execute(text(f'CREATE TABLE "ContactInquiry" ({columns})'))
+        conn.execute(text(
+            'INSERT INTO "ContactInquiry" (id, name, email, message, "opportunityType", source, "privateNotes", status, "notificationStatus", "createdAt") '
+            "VALUES ('i1', 'Secret Person', 'secret@example.com', 'SECRET MESSAGE', 'OTHER', 'contact-form', '', 'NEW', 'FAILED', :ts)"
+        ), {"ts": TEXT_TIMESTAMP})
+    engine.dispose()
+    target_url = _empty_sqlite(tmp_path / "target.db")
+
+    with pytest.raises(IntegrityError) as error:
+        copy_database(source_url, target_url)
+    assert "secret@example.com" not in str(error.value)
+
+    assert main([source_url, target_url]) == 1
+    captured = capsys.readouterr()
+    assert "IntegrityError" in captured.err
+    for secret in ("Secret Person", "secret@example.com", "SECRET MESSAGE"):
+        assert secret not in captured.out + captured.err
 
 
 @pytest.mark.skipif(not POSTGRES_URL, reason="TEST_POSTGRES_URL not set")

@@ -6,10 +6,12 @@ Usage: python -m app.copy_database SOURCE_URL TARGET_URL
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import Boolean, Column, DateTime, func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import build_engine
 from app.models import Base
@@ -40,8 +42,9 @@ def _convert(column: Column, value: Any) -> Any:
 
 
 def copy_database(source_url: str, target_url: str) -> dict[str, int]:
-    source = build_engine(source_url)
-    target = build_engine(target_url)
+    # hide_parameters keeps inquiry contents out of error messages and tracebacks.
+    source = build_engine(source_url, hide_parameters=True)
+    target = build_engine(target_url, hide_parameters=True)
     counts: dict[str, int] = {}
     try:
         with source.connect() as reader, target.begin() as writer:
@@ -68,7 +71,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("source_url")
     parser.add_argument("target_url")
     args = parser.parse_args(argv)
-    for table, count in copy_database(args.source_url, args.target_url).items():
+    try:
+        counts = copy_database(args.source_url, args.target_url)
+    except (SQLAlchemyError, TargetNotEmptyError) as error:
+        detail = error if isinstance(error, TargetNotEmptyError) else type(error).__name__
+        print(f"Copy failed, no rows were written: {detail}", file=sys.stderr)
+        return 1
+    for table, count in counts.items():
         print(f"{table}: {count}")
     return 0
 
