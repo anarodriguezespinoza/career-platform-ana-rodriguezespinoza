@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from functools import lru_cache
+from typing import Any
 
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,10 +23,10 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
-def build_engine(url: str) -> Engine:
+def build_engine(url: str, **engine_options: Any) -> Engine:
     url = normalize_database_url(url)
     if url.startswith("sqlite"):
-        engine = create_engine(url, connect_args={"check_same_thread": False})
+        engine = create_engine(url, connect_args={"check_same_thread": False}, **engine_options)
 
         @event.listens_for(engine, "connect")
         def _enable_foreign_keys(connection, _record):  # type: ignore[no-untyped-def]
@@ -34,7 +35,7 @@ def build_engine(url: str) -> Engine:
             cursor.close()
 
         return engine
-    return create_engine(url, pool_pre_ping=True, pool_timeout=1, connect_args={"connect_timeout": 2})
+    return create_engine(url, pool_pre_ping=True, pool_timeout=1, connect_args={"connect_timeout": 2}, **engine_options)
 
 
 @lru_cache(maxsize=1)
