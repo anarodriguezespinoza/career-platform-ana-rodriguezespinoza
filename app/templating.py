@@ -48,6 +48,7 @@ templates.env.filters["month_year"] = _month_year
 templates.env.filters["datetime"] = _datetime
 templates.env.filters["two_digit"] = _two_digit
 templates.env.globals["current_year"] = lambda: datetime.now(UTC).year
+templates.env.globals["GA_MEASUREMENT_ID"] = "G-JH0KBKW3K9"
 templates.env.globals["DEFAULT_META"] = PageMeta(title=DEFAULT_TITLE, description=DEFAULT_DESCRIPTION)
 
 

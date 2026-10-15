@@ -13,10 +13,10 @@
   <section class="{{ section_class }}">
     <h2 class="{{ heading_class }}">The short version</h2>
     <ul class="{{ list_class }}">
-      <li>The site uses <strong>Google Analytics</strong> to count page views and clicks on links that lead to other websites. It sets cookies to do this.</li>
+      <li>If you agree, the site uses <strong>Google Analytics</strong> to count page views and clicks on links that lead to other websites. It sets cookies to do this. If you decline, or don't answer, it never loads.</li>
       <li>If you use the contact form, I keep your name, email address, and message so I can reply.</li>
       <li>I don't sell your information, show ads, or use it for anything other than running this site and replying to you.</li>
-      <li>There is no cookie banner or on-site opt-out. Your choices are the browser-level ones listed below.</li>
+      <li>You can change your answer at any time from this page.</li>
     </ul>
   </section>
 
@@ -27,7 +27,7 @@
 
   <section class="{{ section_class }}">
     <h2 class="{{ heading_class }}">Google Analytics</h2>
-    <p class="{{ body_class }}">Every page loads a script from Google (Google Analytics 4). It measures two things:</p>
+    <p class="{{ body_class }}">On your first visit, a banner asks whether you allow analytics. Until you press Accept, the site doesn't load anything from Google and doesn't set any Google cookies. If you accept, each page loads a script from Google (Google Analytics 4) that measures two things:</p>
     <ul class="{{ list_class }}">
       <li><strong>Page views:</strong> which page you opened, the page title, and the page that sent you here (the referrer).</li>
       <li><strong>Outbound clicks:</strong> when you click a link to another website, the address of that link.</li>
@@ -38,7 +38,12 @@
       <li><code>_ga</code>, a random ID for your browser. It lasts up to 2 years.</li>
       <li><code>_ga_JH0KBKW3K9</code>, which keeps track of your current visit. It also lasts up to 2 years.</li>
     </ul>
-    <p class="{{ body_class }}">These cookies don't contain your name or email address, and I don't connect analytics data with contact form messages. Google processes this data under the <a class="{{ link_class }}" href="https://policies.google.com/privacy" rel="noreferrer">Google Privacy Policy</a>. Google explains how it uses information from sites like this one on its <a class="{{ link_class }}" href="https://policies.google.com/technologies/partner-sites" rel="noreferrer">partner sites page</a>.</p>
+    <p class="{{ body_class }}">Google signals and ad personalization are turned off in the tag. These cookies don't contain your name or email address, and I don't connect analytics data with contact form messages. Google processes this data under the <a class="{{ link_class }}" href="https://policies.google.com/privacy" rel="noreferrer">Google Privacy Policy</a>. Google explains how it uses information from sites like this one on its <a class="{{ link_class }}" href="https://policies.google.com/technologies/partner-sites" rel="noreferrer">partner sites page</a>.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Remembering your choice</h2>
+    <p class="{{ body_class }}">Whichever button you press, the site stores a small cookie called <code>analytics_consent</code> containing only <code>granted</code> or <code>denied</code>, so it doesn't ask you on every page. It stays in your browser, isn't sent to Google, and expires after 180 days, when the banner asks again.</p>
   </section>
 
   <section class="{{ section_class }}">
@@ -58,7 +63,7 @@
     <ul class="{{ list_class }}">
       <li><strong>Me</strong>, Ana Rodriguez: contact form messages and emails, plus analytics totals.</li>
       <li><strong>Railway</strong>, which hosts the site and its database: server logs and contact form messages.</li>
-      <li><strong>Google</strong>, which runs Google Analytics: the page view and click data described above.</li>
+      <li><strong>Google</strong>, which runs Google Analytics: the page view and click data described above, only if you accept analytics.</li>
       <li><strong>Zoho</strong>, which hosts my email: any email you send me.</li>
     </ul>
     <p class="{{ body_class }}">I don't share or sell your information to anyone else.</p>
@@ -66,14 +71,15 @@
 
   <section class="{{ section_class }}">
     <h2 class="{{ heading_class }}">Your choices</h2>
-    <p class="{{ body_class }}">This site does not currently ask for your consent before loading Google Analytics, and it does not respond to browser signals such as Do Not Track or Global Privacy Control. Here is what actually works:</p>
     <ul class="{{ list_class }}">
-      <li><strong>Block analytics:</strong> install Google's <a class="{{ link_class }}" href="https://tools.google.com/dlpage/gaoptout" rel="noreferrer">Google Analytics opt-out add-on</a>, or use a browser or extension that blocks trackers. The site works fully without Google Analytics.</li>
-      <li><strong>Remove the cookies:</strong> clear this site's cookies in your browser settings, or block cookies for this site.</li>
+      <li><strong>Accept or decline analytics:</strong> use the banner, or change your answer here at any time. <button type="button" class="{{ link_class }}" data-consent-open hidden>Change my analytics choice</button> If you switch from accept to decline, the site deletes its Google Analytics cookies from your browser.</li>
+      <li><strong>Global Privacy Control:</strong> if your browser sends this signal, the site treats it as a decline and doesn't load Google Analytics. The site doesn't respond to the older Do Not Track signal.</li>
+      <li><strong>Without JavaScript:</strong> if JavaScript is off, Google Analytics never loads and no banner appears.</li>
+      <li><strong>Browser tools:</strong> Google's <a class="{{ link_class }}" href="https://tools.google.com/dlpage/gaoptout" rel="noreferrer">Google Analytics opt-out add-on</a>, tracker blockers, and clearing this site's cookies all work too. The site works fully without Google Analytics.</li>
       <li><strong>Skip the form:</strong> you don't have to use the contact form to reach me. Nothing on the site requires it.</li>
       <li><strong>Ask me:</strong> email <a class="{{ link_class }}" href="mailto:ana@anarodriguezespinoza.com">ana@anarodriguezespinoza.com</a> to ask what I have about you, or to have your contact form messages and emails deleted.</li>
     </ul>
-    <p class="{{ body_class }}">I can't delete data that Google or Railway hold on their side, such as server logs. Their privacy policies, linked above, explain your options with them.</p>
+    <p class="{{ body_class }}">Declining stops future collection, but it doesn't remove analytics data Google has already received. I can't delete data that Google or Railway hold on their side, such as server logs. Their privacy policies, linked above, explain your options with them.</p>
   </section>
 
   <section class="{{ section_class }}">

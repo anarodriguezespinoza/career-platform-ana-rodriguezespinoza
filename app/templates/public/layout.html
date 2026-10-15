@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% set nav_links = [("About", "/about"), ("Experience", "/experience"), ("Projects", "/projects"), ("Skills", "/skills"), ("Resume", "/resume"), ("Contact", "/contact")] %}
+{% block head %}
+<script defer src="{{ url_for('static', path='js/analytics-consent.js') }}" data-measurement-id="{{ GA_MEASUREMENT_ID }}"></script>
+{% endblock %}
 {% block body %}
 <header class="border-b border-[var(--line)] bg-[var(--paper)]/95 backdrop-blur">
   <div class="page-shell flex min-h-16 items-center justify-between gap-6 py-4">
@@ -25,4 +28,5 @@
     <span class="flex gap-x-4"><a class="transition-colors hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]" href="/privacy">Privacy</a><span>Built with care and intention.</span></span>
   </div>
 </footer>
+{% include "public/_analytics_consent.html" %}
 {% endblock %}

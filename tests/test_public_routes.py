@@ -82,3 +82,13 @@ def test_contact_form_submission_and_errors(client, session):
     invalid = client.post("/contact", data={**valid, "email": "nope"})
     assert invalid.status_code == 400
     assert "Please check your details and try again." in invalid.text and 'value="Visitor"' in invalid.text
+
+
+def test_analytics_consent_loads_once_on_public_pages_only(client, admin_client, seeded):
+    for path in ("/", "/about", "/contact", "/privacy", "/projects/missing"):
+        html = client.get(path).text
+        assert html.count('data-measurement-id="G-JH0KBKW3K9"') == 1, path
+        assert html.count('id="analytics-consent"') == 1, path
+        assert "googletagmanager.com" not in html, path  # gtag.js is only requested after consent
+    for html in (client.get("/sign-in").text, admin_client.get("/admin").text):
+        assert "analytics-consent" not in html and "G-JH0KBKW3K9" not in html
