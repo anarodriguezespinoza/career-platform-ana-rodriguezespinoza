@@ -1,12 +1,90 @@
 {% extends "public/layout.html" %}
 {% set resume = content.resume_settings %}
+
+{% macro entry(dates, title, org, subtitle=None, bullets=[]) %}
+<li class="grid gap-4 border-t border-[var(--line)] pt-6 md:grid-cols-[180px_1fr]">
+  <p class="font-mono text-xs uppercase tracking-wider text-[var(--muted)]">{{ dates }}</p>
+  <div>
+    <h3 class="font-serif text-2xl font-semibold">{{ title }}</h3>
+    <p class="mt-1 font-medium text-[var(--accent)]">{{ org }}</p>
+    {% if subtitle %}<p class="mt-1 text-sm text-[var(--muted)]">{{ subtitle }}</p>{% endif %}
+    {% if bullets %}
+    <ul class="mt-4 max-w-2xl list-disc space-y-2 pl-5 leading-7 text-[var(--muted)]">
+      {% for bullet in bullets %}<li>{{ bullet }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {{ caller() if caller }}
+  </div>
+</li>
+{% endmacro %}
+
 {% block content %}
 <p class="eyebrow">Resume</p>
-<h1 class="page-title">{{ resume.title if resume else "Resume" }}</h1>
-<p class="mt-8 max-w-2xl text-xl leading-9 text-[var(--muted)]">{{ resume.intro if resume else (content.profile.summary if content.profile else "A concise overview of my experience and skills.") }}</p>
+<h1 class="page-title">Ana Rodriguez Espinoza</h1>
+<p class="mt-6 text-sm text-[var(--muted)]">
+  Los Angeles, CA ·
+  <a class="underline underline-offset-4 hover:text-[var(--accent)]" href="https://www.linkedin.com/in/ana-rodriguezespinoza" rel="noopener">linkedin.com/in/ana-rodriguezespinoza</a>
+</p>
 {% if download_url %}
 <a href="{{ download_url }}" class="button-primary mt-10 inline-flex">Download resume</a>
 {% else %}
 <p class="mt-10 text-sm text-[var(--muted)]">A downloadable resume is available on request.</p>
 {% endif %}
+
+<section class="mt-16" aria-labelledby="education">
+  <h2 id="education" class="eyebrow">Education</h2>
+  <ol class="mt-6 space-y-10">
+    {% call entry("Expected May 2027", "B.S. in Information Systems and Business Analytics", "Loyola Marymount University", "Los Angeles, CA") %}
+    <p class="mt-4 max-w-2xl leading-7 text-[var(--muted)]"><span class="font-medium text-[var(--ink)]">Relevant coursework:</span> Database Management Systems, Network Cloud Computing, Mobile Application Development, Cybersecurity, Computer Programming, Analytics in Operations &amp; Supply Chain Management</p>
+    {% endcall %}
+  </ol>
+</section>
+
+<section class="mt-16" aria-labelledby="experience">
+  <h2 id="experience" class="eyebrow">Professional experience</h2>
+  <ol class="mt-6 space-y-10">
+    {{ entry("June 2026 — Present", "iOS Engineering Intern", "Hatch Baby Inc", "Redwood City, CA", [
+      "Ships user-facing features in Swift for the Hatch Sleep iOS app on a weekly release cadence, partnering with product, design, and QA to allow 100K+ new downloads per month",
+      "Builds type-safe analytics infrastructure using schema-driven code generation, migrating legacy event tracking to a single source of truth that improves data quality and reduces instrumentation errors",
+      "Resolves production bugs and strengthens CI/CD and release-candidate processes, reducing build wait times and missed release cuts",
+    ]) }}
+    {{ entry("June 2025 — August 2025", "Transaction Diligence & Business Valuation Intern", "Ernst & Young LLP", "San Francisco, CA", [
+      "Analyzed 5 years of profit & loss statements and cash flow statements across multiple high-profile M&A engagements to support accurate valuation assessments",
+      "Prepared general ledger flat files and performed multi-million-dollar proof-of-cash reconciliations in Excel, improving the efficiency and reliability of financial forecasting workflows",
+      "Independently identified data discrepancies in financial statements and presented findings and recommendations that were incorporated into client-facing deliverables",
+    ]) }}
+    {{ entry("January 2024 — May 2026", "Program Coordinator", "Romo & Cabrini Justice Center", "Los Angeles, CA", [
+      "Managed 10+ events per semester, owning logistics, outreach, and marketing to drive student engagement in wellness and education initiatives for underrepresented groups",
+      "Co-designed accessible educational programming for 30+ first-generation immigrant students",
+      "Coordinated 3+ concurrent projects per semester, balancing independent work and teamwork to keep deliverables on schedule",
+    ]) }}
+  </ol>
+</section>
+
+<section class="mt-16" aria-labelledby="leadership">
+  <h2 id="leadership" class="eyebrow">Leadership</h2>
+  <ol class="mt-6 space-y-10">
+    {% call entry("August 2026 — Present", "President", "Information Systems & Business Analytics Society, LMU", None, [
+      "Leads cross-functional collaboration between faculty and students to design technology-focused workshops, Datathons, and speaker events, increasing average attendance by 13 students year-over-year",
+      "Develops strategies to expand the Society’s visibility and foster an inclusive learning environment for more than 100 information systems & business analytics students",
+    ]) %}{% endcall %}
+  </ol>
+  <p class="mt-8 max-w-3xl leading-7 text-[var(--muted)]"><span class="font-medium text-[var(--ink)]">Additional involvement:</span> Chief of Community Outreach, Central American Unified Student Association · Director of D.E.I., Delta Gamma · First-to-Go · 10,000 Degrees · Students Rising Above</p>
+</section>
+
+<section class="mt-16" aria-labelledby="technical-skills">
+  <h2 id="technical-skills" class="eyebrow">Technical skills</h2>
+  <dl class="mt-6 space-y-6 border-t border-[var(--line)] pt-6">
+    {% for label, items in [
+      ("Languages", ["Swift", "Python", "SQL", "Git"]),
+      ("Tools & platforms", ["Xcode", "GitHub", "Jira", "MySQL", "Excel (Advanced)", "Access", "Microsoft Azure", "AWS"]),
+      ("Spoken languages", ["Spanish (Fluent)", "French (Intermediate)"]),
+    ] %}
+    <div class="grid gap-3 md:grid-cols-[180px_1fr]">
+      <dt class="font-mono text-xs uppercase tracking-wider text-[var(--muted)]">{{ label }}</dt>
+      <dd class="flex flex-wrap gap-2">{% for item in items %}<span class="tag">{{ item }}</span>{% endfor %}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+</section>
 {% endblock %}
