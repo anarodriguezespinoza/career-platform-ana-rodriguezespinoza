@@ -1,0 +1,84 @@
+{% extends "public/layout.html" %}
+{% set section_class = "mt-12 border-t border-[var(--line)] pt-8" %}
+{% set heading_class = "font-serif text-2xl font-semibold" %}
+{% set body_class = "mt-4 text-lg leading-8 text-[var(--muted)]" %}
+{% set list_class = "mt-4 list-disc space-y-3 pl-6 text-lg leading-8 text-[var(--muted)]" %}
+{% set link_class = "text-[var(--accent)] underline underline-offset-4" %}
+{% block content %}
+<div class="max-w-3xl">
+  <p class="eyebrow">Privacy</p>
+  <h1 class="page-title">What this site collects, and why.</h1>
+  <p class="mt-8 text-xl leading-9 text-[var(--muted)]">This is my personal portfolio. I want to know which pages people read and which links they follow, and nothing more. This page explains exactly what happens when you visit, in plain language. Last updated {{ updated }}.</p>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">The short version</h2>
+    <ul class="{{ list_class }}">
+      <li>The site uses <strong>Google Analytics</strong> to count page views and clicks on links that lead to other websites. It sets cookies to do this.</li>
+      <li>If you use the contact form, I keep your name, email address, and message so I can reply.</li>
+      <li>I don't sell your information, show ads, or use it for anything other than running this site and replying to you.</li>
+      <li>There is no cookie banner or on-site opt-out. Your choices are the browser-level ones listed below.</li>
+    </ul>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Visiting a page</h2>
+    <p class="{{ body_class }}">The site runs on <a class="{{ link_class }}" href="https://railway.com/legal/privacy" rel="noreferrer">Railway</a>, a hosting company. Like nearly every web server, it records each request in a server log: your IP address, the page you asked for, the time, and whether it loaded. I use these logs only to fix problems and keep the site running. They are stored by Railway, and how long they are kept depends on Railway's settings, not mine.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Google Analytics</h2>
+    <p class="{{ body_class }}">Every page loads a script from Google (Google Analytics 4). It measures two things:</p>
+    <ul class="{{ list_class }}">
+      <li><strong>Page views:</strong> which page you opened, the page title, and the page that sent you here (the referrer).</li>
+      <li><strong>Outbound clicks:</strong> when you click a link to another website, the address of that link.</li>
+    </ul>
+    <p class="{{ body_class }}">Along with each of these, your browser sends Google technical details such as your browser type, device type, screen size, language, and your IP address. Google uses the IP address to estimate a rough location (country and city). I see these results only as totals in reports; Google does not show me your IP address.</p>
+    <p class="{{ body_class }}">To tell a returning visitor from a new one, Google Analytics stores two cookies in your browser on this site:</p>
+    <ul class="{{ list_class }}">
+      <li><code>_ga</code>, a random ID for your browser. It lasts up to 2 years.</li>
+      <li><code>_ga_JH0KBKW3K9</code>, which keeps track of your current visit. It also lasts up to 2 years.</li>
+    </ul>
+    <p class="{{ body_class }}">These cookies don't contain your name or email address, and I don't connect analytics data with contact form messages. Google processes this data under the <a class="{{ link_class }}" href="https://policies.google.com/privacy" rel="noreferrer">Google Privacy Policy</a>. Google explains how it uses information from sites like this one on its <a class="{{ link_class }}" href="https://policies.google.com/technologies/partner-sites" rel="noreferrer">partner sites page</a>.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">The contact form</h2>
+    <p class="{{ body_class }}">If you send a message, the site stores your <strong>name</strong>, <strong>email address</strong>, the <strong>reason you picked</strong>, and your <strong>message</strong>, with the time you sent it. It is saved in the site's database, which is also hosted by Railway. I use it only to read and reply to your message.</p>
+    <p class="{{ body_class }}">To stop the form from being flooded, the server briefly uses your IP address to allow at most three messages per hour. That count lives only in the server's memory. It is not saved with your message and is gone within an hour.</p>
+    <p class="{{ body_class }}">Messages are kept until I delete them. Nothing deletes them automatically yet. If you'd like yours removed, email me and I'll delete it.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Email</h2>
+    <p class="{{ body_class }}">If you email me directly, your message is delivered to my mailbox, which is hosted by <a class="{{ link_class }}" href="https://www.zoho.com/privacy.html" rel="noreferrer">Zoho Mail</a>.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Who receives your information</h2>
+    <ul class="{{ list_class }}">
+      <li><strong>Me</strong>, Ana Rodriguez: contact form messages and emails, plus analytics totals.</li>
+      <li><strong>Railway</strong>, which hosts the site and its database: server logs and contact form messages.</li>
+      <li><strong>Google</strong>, which runs Google Analytics: the page view and click data described above.</li>
+      <li><strong>Zoho</strong>, which hosts my email: any email you send me.</li>
+    </ul>
+    <p class="{{ body_class }}">I don't share or sell your information to anyone else.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Your choices</h2>
+    <p class="{{ body_class }}">This site does not currently ask for your consent before loading Google Analytics, and it does not respond to browser signals such as Do Not Track or Global Privacy Control. Here is what actually works:</p>
+    <ul class="{{ list_class }}">
+      <li><strong>Block analytics:</strong> install Google's <a class="{{ link_class }}" href="https://tools.google.com/dlpage/gaoptout" rel="noreferrer">Google Analytics opt-out add-on</a>, or use a browser or extension that blocks trackers. The site works fully without Google Analytics.</li>
+      <li><strong>Remove the cookies:</strong> clear this site's cookies in your browser settings, or block cookies for this site.</li>
+      <li><strong>Skip the form:</strong> you don't have to use the contact form to reach me. Nothing on the site requires it.</li>
+      <li><strong>Ask me:</strong> email <a class="{{ link_class }}" href="mailto:ana@anarodriguezespinoza.com">ana@anarodriguezespinoza.com</a> to ask what I have about you, or to have your contact form messages and emails deleted.</li>
+    </ul>
+    <p class="{{ body_class }}">I can't delete data that Google or Railway hold on their side, such as server logs. Their privacy policies, linked above, explain your options with them.</p>
+  </section>
+
+  <section class="{{ section_class }}">
+    <h2 class="{{ heading_class }}">Changes</h2>
+    <p class="{{ body_class }}">If I change what this site collects, I'll update this page and the date at the top.</p>
+  </section>
+</div>
+{% endblock %}

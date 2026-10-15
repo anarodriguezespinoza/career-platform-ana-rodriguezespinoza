@@ -64,6 +64,15 @@ def test_robots_and_sitemap(client, seeded):
     assert "archived-project" not in sitemap
 
 
+def test_privacy_page_renders_and_is_linked(client, seeded):
+    response = client.get("/privacy")
+    assert response.status_code == 200
+    assert "<title>Privacy — Ana Rodriguez</title>" in response.text
+    assert "_ga_JH0KBKW3K9" in response.text
+    assert 'href="/privacy"' in client.get("/").text
+    assert "<loc>https://ana.example.com/privacy</loc>" in client.get("/sitemap.xml").text
+
+
 def test_contact_form_submission_and_errors(client, session):
     valid = {"name": "Visitor", "email": "v@example.com", "opportunityType": "SPEAKING", "message": "Hello"}
     response = client.post("/contact", data=valid)

@@ -138,6 +138,15 @@ def contact_submit(
     return RedirectResponse("/contact?sent=1", status_code=303)
 
 
+PRIVACY_UPDATED = "October 15, 2026"
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request) -> HTMLResponse:
+    meta = page_meta("Privacy — Ana Rodriguez", "What this site collects, why, who receives it, and your choices.", "/privacy")
+    return render(request, "public/privacy.html", {"meta": meta, "updated": PRIVACY_UPDATED})
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse)
 def robots() -> str:
     return f"User-Agent: *\nAllow: /\nDisallow: /admin\nDisallow: /sign-in\nDisallow: /api/\n\nSitemap: {site_url()}/sitemap.xml\n"
@@ -153,6 +162,7 @@ def build_public_sitemap(origin: str, slugs: list[str]) -> str:
         ("/skills", "monthly", 0.8),
         ("/resume", "monthly", 0.8),
         ("/contact", "monthly", 0.7),
+        ("/privacy", "yearly", 0.3),
     ]
     entries = "".join(
         f"<url><loc>{escape(origin + path)}</loc><changefreq>{frequency}</changefreq><priority>{priority}</priority></url>\n"
