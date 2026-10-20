@@ -228,6 +228,5 @@ node_modules/
 *.db
 
 # Local secrets, caches, macOS metadata
-*.env
 .cloudflare/
 .DS_Store
