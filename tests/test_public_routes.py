@@ -50,10 +50,57 @@ def test_falls_back_to_snapshot_when_database_is_unavailable(client, snapshot_st
     assert 'href="/api/resume"' not in client.get("/resume").text
 
 
-def test_shows_unavailable_page_when_no_source_works(client, monkeypatch):
+def _fail_database(monkeypatch):
     monkeypatch.setattr("app.repositories.ContentRepository.list_published", lambda self: (_ for _ in ()).throw(RuntimeError("down")))
-    response = client.get("/")
+
+
+def test_shows_unavailable_page_when_no_source_works(client, monkeypatch):
+    _fail_database(monkeypatch)
+    response = client.get("/experience")
     assert response.status_code == 503 and "Please try again shortly." in response.text
+
+
+def test_database_failure_keeps_profile_visible_and_returns_503(client, seeded, monkeypatch):
+    _fail_database(monkeypatch)
+    for path in ("/", "/projects", "/about"):
+        response = client.get(path)
+        assert response.status_code == 503, path
+        assert "Published project" not in response.text, path
+    for path in ("/", "/about"):
+        assert "Ana Rodriguez Espinoza" in client.get(path).text, path
+    assert "Projects temporarily unavailable" in client.get("/").text
+    assert "Projects temporarily unavailable" in client.get("/projects").text
+
+
+def test_recovers_without_restart_when_database_returns(client, seeded, monkeypatch):
+    with monkeypatch.context() as outage:
+        _fail_database(outage)
+        assert client.get("/projects").status_code == 503
+    response = client.get("/projects")
+    assert response.status_code == 200
+    assert "Published project" in response.text and "Projects temporarily unavailable" not in response.text
+
+
+def test_empty_projects_table_shows_empty_state(client):
+    for path in ("/", "/projects"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert "No projects are published yet." in response.text, path
+
+
+def test_missing_profile_row_shows_no_invented_text(client):
+    home, about = client.get("/").text, client.get("/about").text
+    for invented in ("Building thoughtful digital products", "A portfolio of experience, projects, and skills.", "hello@example.com", "Available remotely", "Professional summary unavailable."):
+        assert invented not in home and invented not in about, invented
+    assert "Ana Rodriguez Espinoza" in home
+
+
+def test_profile_shows_education_and_links(client, seeded):
+    for path in ("/", "/about"):
+        html = client.get(path).text
+        assert "Loyola Marymount University" in html, path
+        assert 'href="https://www.linkedin.com/in/ana-rodriguezespinoza"' in html, path
+        assert 'href="https://github.com/anarodriguezespinoza"' in html, path
 
 
 def test_robots_and_sitemap(client, seeded):

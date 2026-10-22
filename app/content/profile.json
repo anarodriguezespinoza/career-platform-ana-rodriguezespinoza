@@ -1,0 +1,19 @@
+{
+  "name": "Ana Rodriguez Espinoza",
+  "headline": "Information Systems & Business Analytics student · iOS Engineering Intern",
+  "summary": "Information Systems and Business Analytics student at Loyola Marymount University, currently an iOS Engineering Intern at Hatch Baby, where I ship Swift features for the Hatch Sleep app. Before that I was a Transaction Diligence & Business Valuation Intern at Ernst & Young.",
+  "email": "ana@anarodriguezespinoza.com",
+  "location": "Los Angeles, CA",
+  "education": [
+    {
+      "degree": "B.S. in Information Systems and Business Analytics",
+      "school": "Loyola Marymount University",
+      "dates": "Expected May 2027",
+      "location": "Los Angeles, CA"
+    }
+  ],
+  "links": [
+    {"label": "LinkedIn", "url": "https://www.linkedin.com/in/ana-rodriguezespinoza"},
+    {"label": "GitHub", "url": "https://github.com/anarodriguezespinoza"}
+  ]
+}

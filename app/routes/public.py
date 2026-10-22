@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import site_url
 from app.db import get_db
+from app.domain.content import PublicContent
 from app.domain.inquiries import (
     OPPORTUNITY_TYPES,
     ContactInputError,
@@ -18,11 +19,12 @@ from app.domain.inquiries import (
     submit_inquiry,
     validate_contact_input,
 )
-from app.domain.snapshot import PublicContentUnavailableError
+from app.domain.snapshot import ContentSource, PublicContentUnavailableError
 from app.observability import error_type, get_request_context, logger
+from app.profile_facts import load_profile_facts
 from app.public_content import find_public_project, get_public_content
 from app.routes.errors import NotFoundError
-from app.templating import page_meta, render
+from app.templating import PageMeta, page_meta, render
 
 router = APIRouter()
 DB = Annotated[Session, Depends(get_db)]
@@ -38,18 +40,42 @@ def client_identity(request: Request) -> str:
     return forwarded or request.headers.get("x-real-ip", "").strip() or (request.client.host if request.client else "") or "anonymous"
 
 
+def _profile_page(request: Request, db: Session, template: str, meta: PageMeta) -> HTMLResponse:
+    """Render a page that keeps the profile visible when the database is down.
+
+    With no database and no snapshot, the profile comes from `app/content/profile.json`,
+    the projects section says it is temporarily unavailable, and the status is 503.
+    """
+    content: PublicContent | None
+    source: ContentSource | None
+    try:
+        content, source = get_public_content(db)
+    except PublicContentUnavailableError:
+        content, source = None, None
+    facts = load_profile_facts()
+    profile = content.profile if content and content.profile else facts
+    context = {
+        "meta": meta,
+        "content": content,
+        "source": source,
+        "profile": profile,
+        "facts": facts,
+        "projects": content.projects if content else [],
+        "projects_unavailable": content is None,
+    }
+    return render(request, template, context, status_code=503 if content is None else 200)
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, db: DB) -> HTMLResponse:
-    content, source = get_public_content(db)
     meta = page_meta("Ana Rodriguez — Software engineer", "The professional portfolio of Ana Rodriguez, a product-minded software engineer.", "/")
-    return render(request, "public/home.html", {"meta": meta, "content": content, "source": source})
+    return _profile_page(request, db, "public/home.html", meta)
 
 
 @router.get("/about", response_class=HTMLResponse)
 def about(request: Request, db: DB) -> HTMLResponse:
-    content, source = get_public_content(db)
     meta = page_meta("About — Ana Rodriguez", "Professional summary and contact details for Ana Rodriguez.", "/about")
-    return render(request, "public/about.html", {"meta": meta, "content": content, "source": source})
+    return _profile_page(request, db, "public/about.html", meta)
 
 
 @router.get("/experience", response_class=HTMLResponse)
@@ -61,9 +87,8 @@ def experience(request: Request, db: DB) -> HTMLResponse:
 
 @router.get("/projects", response_class=HTMLResponse)
 def projects(request: Request, db: DB) -> HTMLResponse:
-    content, source = get_public_content(db)
     meta = page_meta("Projects — Ana Rodriguez", "Selected projects and experiments by Ana Rodriguez.", "/projects")
-    return render(request, "public/projects.html", {"meta": meta, "content": content, "source": source})
+    return _profile_page(request, db, "public/projects.html", meta)
 
 
 @router.get("/projects/{slug}", response_class=HTMLResponse)

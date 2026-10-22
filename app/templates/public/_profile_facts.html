@@ -1,0 +1,15 @@
+<dl class="grid gap-8 border-t border-[var(--line)] pt-8 sm:grid-cols-2">
+  <div>
+    <dt class="eyebrow">Education</dt>
+    {% for item in facts.education %}
+    <dd class="mt-2 text-lg">{{ item.degree }}</dd>
+    <dd class="text-[var(--muted)]">{{ item.school }} · {{ item.location }} · {{ item.dates }}</dd>
+    {% endfor %}
+  </div>
+  <div>
+    <dt class="eyebrow">Links</dt>
+    <dd class="mt-2 flex flex-wrap gap-4 text-lg">
+      {% for link in facts.links %}<a class="text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-4" href="{{ link.url }}" rel="noopener">{{ link.label }}</a>{% endfor %}
+    </dd>
+  </div>
+</dl>

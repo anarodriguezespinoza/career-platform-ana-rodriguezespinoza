@@ -1,0 +1,9 @@
+{% if projects_unavailable %}
+<p class="border-l-2 border-[var(--accent)] pl-6 text-lg leading-8 text-[var(--muted)]" role="status">Projects temporarily unavailable. Please check back shortly.</p>
+{% elif projects %}
+<div class="grid gap-5 md:grid-cols-2">
+  {% for project in projects[:limit] %}{% include "public/_project_card.html" %}{% endfor %}
+</div>
+{% else %}
+<p class="border-l-2 border-[var(--line)] pl-6 text-lg leading-8 text-[var(--muted)]">No projects are published yet.</p>
+{% endif %}
