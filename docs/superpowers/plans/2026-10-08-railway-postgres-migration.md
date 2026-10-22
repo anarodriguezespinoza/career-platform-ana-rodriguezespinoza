@@ -314,6 +314,52 @@ This plan was written as a move to Railway's generated domain only, and two of i
 2. **Step 6.5 (deallocate the VM)** is not carried out. Project 1 requires the Azure VM to remain running, so the VM stays up with `career-platform` enabled (2 workers, reboot verified 2026-10-21; see the operate-the-vm plan §4). It no longer receives the domain's traffic. Rollback to it is in the README.
 3. **"A real change to the original data before the copy":** the copy on 2026-10-08 moved 6 real contact inquiries and no content rows, so there was nothing to edit in content. A later re-seed can't imitate those inquiries, and 6.6 checks them row by row against the VM's untouched SQLite file. That comparison is the evidence that the original data, not a re-seed, is in Postgres.
 
+
+### Recovering from the Railway incident (2026-10-21)
+
+Railway reported a platform outage with a security notice on 2026-10-21. Builds and the API were down, the site returned `502`, and the CLI login was invalidated. Do these steps in order once the [status page](https://status.railway.com) shows Builds as operational. They follow Railway's published guides ("Rotate PostgreSQL Database Credentials", "Redeploy Buckets and Reconnect GitHub After the Credential Reset", "Check for Anomalous GitHub Access").
+
+#### R.1 GitHub (done 2026-10-21)
+- **Result:** no deploy keys, webhooks, or Actions secrets on the repository. The only collaborator is `anarodriguezespinoza` (admin), and the last 30 repository events are all my own pushes and branch changes. Still to do by hand: review github.com/settings/security-log (filter `operation:authentication`), github.com/settings/applications, SSH keys, and personal access tokens. `gh` lacks the scopes to list keys.
+
+#### R.2 Log in again and reconnect GitHub
+- **Where:** laptop, then Railway dashboard
+- **Run:** `railway login`, then `railway link --project rare-smile --environment production --service career-platform-ana-rodriguezespinoza`. In the dashboard: railway.com/account → reconnect GitHub. Accept any pending permission update at github.com/apps/railway-app/installations/new. Open the web service → Settings → Source and confirm repo `anarodriguezespinoza/career-platform-ana-rodriguezespinoza`, branch `main`, and that autodeploy is **enabled**.
+- **Check:** `railway status` names the project, environment, and service.
+- **Result:** TODO
+
+#### R.3 Turn off Postgres public access
+- **Where:** Postgres service → Settings → Networking
+- **Run:** disable **Public Access** (the TCP proxy). Turn it back on only for 6.6 or a rollback export, then off again.
+- **Why:** while it's on, a leaked password works from anywhere.
+- **Result:** TODO
+
+#### R.4 Rotate the Postgres password
+- **Where:** Postgres service → Database → Config → Connection
+- **Run:** click **Regenerate**. Don't edit `POSTGRES_PASSWORD`/`PGPASSWORD` by hand and don't run `ALTER USER`, because that puts the variable and the database out of sync.
+- **Why:** Railway recommends it after the security notice. The web service uses the reference `${{Postgres.DATABASE_URL}}`, so it picks up the new password on its next deploy. Nothing else holds a pasted copy (the copy and compare commands read `DATABASE_PUBLIC_URL` fresh each time).
+- **Check:** the database restarts; the web service fails to connect until R.5.
+- **Result:** TODO
+
+#### R.5 Redeploy the web service
+- **Run:** push `main` (it holds the commits not yet deployed), or `railway redeploy --service career-platform-ana-rodriguezespinoza`.
+- **Check:** `railway deployment list` shows a new `SUCCESS` deployment; deploy logs show `alembic upgrade head` finishing and no `password authentication failed`; `curl -sS https://anarodriguezespinoza.com/api/health` → `{"status":"ok","database":"up","publicSource":"database"}`. Record the deployment ID in `docs/evidence/reviewed-change.md`.
+- **Result:** TODO
+
+#### R.6 Look for misuse
+- **Run:** `railway connect Postgres`, then:
+  ```sql
+  SELECT pid, usename, client_addr, application_name, backend_start, state FROM pg_stat_activity WHERE datname = current_database();
+  SELECT rolname FROM pg_roles;
+  SELECT count(*) FROM "ContactInquiry";
+  SELECT extname FROM pg_extension;
+  ```
+- **Check:** only the app's sessions and your own; no unexpected roles or extensions; the inquiry count is 6 plus the inquiries submitted on Railway since cutover. Then run 6.6 (`compare_databases`): the 6 original inquiries must still be `matched`, not `changed`. Search the deploy logs for `authentication failed`. PostgreSQL doesn't log successful logins by default, so a clean search doesn't prove there was no access.
+- **Result:** TODO. If anything is unexpected: record it, keep a `pg_dump`, and note that the inquiries hold visitors' names, emails, and messages.
+
+#### R.7 Re-run the checks
+- Re-run the commands in `docs/evidence/https-checks.md` and add a dated "after recovery" section, then fill in `docs/evidence/reviewed-change.md` §3.
+
 ---
 
 ## Out of scope

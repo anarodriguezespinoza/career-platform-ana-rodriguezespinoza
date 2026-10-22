@@ -12,7 +12,7 @@
 | `http://anarodriguezespinoza.com/` | 301 to https | `301` to `https://anarodriguezespinoza.com/` (Railway edge) | Pass |
 | Railway certificate hostname | covers `anarodriguezespinoza.com` | SAN `DNS:anarodriguezespinoza.com` | Pass |
 | Railway certificate validity | chain verifies, in date | Let's Encrypt `YE2` → `Root YE` → `ISRG Root X2`, `Verify return code: 0 (ok)`, valid 2026-10-08 21:23 UTC to 2027-01-06 21:23 UTC, TLS 1.3 | Pass |
-| `https://anarodriguezespinoza.com/` page | `200` | **`502`** from `server: railway-hikari` ("Application failed to respond") | **Fail**: TLS works, the app behind Railway's edge didn't answer. Tracked in the README's remaining limitations until the Railway deployment is fixed and this check is re-run |
+| `https://anarodriguezespinoza.com/` page | `200` | **`502`** from `server: railway-hikari` ("Application failed to respond") | **Fail**: TLS works, the app behind Railway's edge didn't answer. Cause: a Railway platform outage with a security notice on 2026-10-21 (Builds and API down). See README → Investigated failures. Re-run after recovery |
 
 Before this change (same day, 18:21 PDT), `www` was DNS only, so `https://www…/` went straight to the Azure VM and returned `200` from Nginx with the VM's own certificate (SAN `anarodriguezespinoza.com, www.anarodriguezespinoza.com`). That meant `www` showed the old Azure copy of the site instead of the root.
 
