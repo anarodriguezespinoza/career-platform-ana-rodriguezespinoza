@@ -9,7 +9,9 @@ A FastAPI application with server-rendered Jinja templates and SQLAlchemy/Alembi
 | Web app | Railway project `rare-smile`, environment `production`, service `career-platform-ana-rodriguezespinoza` |
 | Source | GitHub `main`; Railway builds the `Dockerfile` and redeploys on every push to `main` |
 | Database | Railway PostgreSQL service `Postgres` (PostgreSQL 18), reached over Railway's private network |
-| Domain | `anarodriguezespinoza.com`, DNS on Cloudflare: a DNS-only `CNAME` to Railway, plus Railway's `_railway-verify` `TXT` record |
+| Domain | `anarodriguezespinoza.com`, DNS on Cloudflare: a DNS-only `CNAME` to Railway, plus Railway's `_railway-verify` `TXT` record. `www` is a proxied record that a Cloudflare redirect rule sends to the root with a `301` |
+| Email | Zoho Mail for `ana@anarodriguezespinoza.com` (MX, SPF, DKIM, DMARC on Cloudflare) |
+| Analytics | Google Analytics 4 (`G-JH0KBKW3K9`), loaded only after the visitor accepts the consent banner |
 
 `railway.json` configures each deploy:
 
@@ -33,7 +35,7 @@ Never commit or print the database URLs. Read them through the Railway CLI or da
 
 - **Admin sign-in (`/admin`) doesn't work.** Edit content directly in the database (see [Operating the site](#operating-the-site)) and set `publicationState` to `PUBLISHED` for it to appear publicly.
 - **Contact submissions are saved** to `ContactInquiry` with `notificationStatus = FAILED`, because no email is sent.
-- **There is no snapshot fallback.** If the database is down, public pages return 503, and `/api/health` returns `{"status":"unavailable",...}` with HTTP 503.
+- **There is no snapshot fallback.** If the database is down, `/`, `/about`, and `/projects` still show the profile from `app/content/profile.json`, the projects section says "Projects temporarily unavailable", and the status is 503. The other public pages return the 503 "temporarily unavailable" page, and `/api/health` returns `{"status":"unavailable",...}` with HTTP 503. Live reads resume on the next request once the database is back; no restart is needed.
 
 A healthy deploy returns `{"status":"ok","database":"up","publicSource":"database"}`.
 
@@ -106,11 +108,108 @@ Styles are Tailwind classes in `app/templates/`, compiled to the committed `app/
 
 ## Architecture and operations
 
+- [Project 1 submission index](docs/project-1-submission.md): the live URL, final commit, and where the evidence for each requirement lives.
+- [Design spec](docs/superpowers/specs/2026-09-15-personal-resume-career-platform-design.md) and plans: [app build](docs/superpowers/plans/2026-09-17-personal-resume-career-platform.md), [Azure VM migration](docs/superpowers/plans/2026-09-24-azure-vm-migration.md), [operate the VM](docs/superpowers/plans/2026-10-01-operate-the-vm.md), [Railway + PostgreSQL migration](docs/superpowers/plans/2026-10-08-railway-postgres-migration.md).
+- Evidence: [ex03 (Azure VM)](docs/evidence/ex03.md), [ex05 (DNS investigation)](docs/evidence/ex05.md), [ex06 (email and analytics)](docs/evidence/ex06.md), [Zoho header check](docs/evidence/zoho-header-check.md), [final DNS records](docs/evidence/dns-records-final.md), [HTTPS checks](docs/evidence/https-checks.md), [encryption on the VM](docs/evidence/encryption.md), [how this site is secured](docs/how-this-site-is-secured.md).
+- Diagrams: [request paths for Azure and Railway, with email and analytics](docs/diagrams/request-path.md) ([Railway PNG](docs/diagrams/request-path-railway.png), [Azure PNG](docs/diagrams/request-path-azure.png)), [system architecture](docs/diagrams/system-architecture.mmd), [data model](docs/diagrams/data-model.mmd).
 - [System architecture](docs/architecture.md): request paths, fallback behavior, health contract, and security boundaries.
 - [Database and privacy model](docs/database.md): models, publication states, public projection, inquiries, and migrations.
 - [Deployment and recovery](docs/deployment.md): the Railway configuration, release migrations, health verification, and the AWS recovery commands.
 - [Glossary](docs/glossary.md): shared platform terminology.
-- [System diagram](docs/diagrams/system-architecture.mmd) and [data-model diagram](docs/diagrams/data-model.mmd).
+
+## Decisions
+
+| Decision | Chosen | Alternatives considered | Why |
+| --- | --- | --- | --- |
+| First database engine | **SQLite**, one file (`data.db`) on the Azure VM's disk | PostgreSQL on the same VM; Azure Database for PostgreSQL | One VM, one process, mostly reads: SQLite needed no extra server to install, secure, patch, or pay for, and the app reads it with no network hop. The costs I accepted: one writer at a time, data tied to that VM's disk, backups by copying the file. Those costs are what the Railway move later addressed |
+| Move hosting to Railway | **Railway** web service + Railway PostgreSQL | Keep the VM and add Postgres to it; Azure App Service + Azure Database for PostgreSQL; Render or Fly.io | On the VM I owned the OS, patches, Nginx, certbot, systemd, the firewall, and backups. Railway builds the Dockerfile on every push to `main`, runs migrations before traffic moves, health-checks, restarts, and terminates TLS, so I only own the code, config, and data. Managed Postgres removes the single-file, single-writer limits. Azure's managed equivalents would cost more of the student credit for the same result |
+| Email | **Managed: Zoho Mail** (free plan) | Self-hosted Postfix/Dovecot on the VM; Google Workspace; Cloudflare Email Routing | Self-hosting means running SMTP, spam filtering, DKIM signing, TLS, and storage myself, and Azure blocks outbound port 25 on most subscriptions, including student ones. A new VM IP also has no sending reputation, so mail would likely land in spam. Google Workspace does the same job but is paid. Cloudflare Email Routing only forwards, it can't send as the domain. Zoho gives a real mailbox that sends and receives as `ana@anarodriguezespinoza.com` for free, and SPF, DKIM, and DMARC pass |
+| Profile while the database is down | A version-controlled `app/content/profile.json` | Hard-coded template text; a full snapshot store (the S3 code exists but isn't configured on Railway) | The profile stays visible during an outage without inventing text. The file holds only facts that are already public on the resume page (name, headline, summary, education, links), so it never exposes drafts or inquiries |
+
+## Migration: Azure VM to Railway
+
+**What moved (2026-10-08):** the app moved from `uvicorn` under systemd behind Nginx on `vm-career-platform` (SQLite) to a Railway service built from the `Dockerfile` (PostgreSQL 18). The full step log is in the [migration plan](docs/superpowers/plans/2026-10-08-railway-postgres-migration.md).
+
+**How current data was preserved:**
+
+1. The schema was created on Postgres by Railway's pre-deploy `alembic upgrade head`, the same migration the VM used.
+2. The VM app was stopped so no new inquiry could land in SQLite, and `data.db` was copied to my laptop.
+3. `python -m app.copy_database` copied every model table into the empty Postgres database in one transaction. It converted the Prisma-era formats: one inquiry stored its timestamps as integer milliseconds, five as text, and booleans as 0/1. It refuses a non-empty target, so it can't half-copy twice.
+4. The source held 6 contact inquiries and no content rows. `python -m app.compare_databases` compares source and target row by row, by primary key and every column, and prints counts only. That proves the six inquiries arrived unchanged, which a re-seed can't fake because the seed creates no inquiries.
+5. The VM's `data.db` is untouched (last modified 2026-10-06) and stays as the rollback copy.
+
+**Who is responsible for what:**
+
+| Layer | Azure VM | Railway |
+| --- | --- | --- |
+| Operating system | **Me**: Ubuntu updates, reboots, disk | Railway (container host) |
+| Runtime | **Me**: Python and `uv` installed on the VM | **Me** in the `Dockerfile` (`python:3.13-slim`); Railway builds and runs it |
+| Entry point / process supervision | **Me**: systemd unit, `Restart=on-failure`, `--workers 2`, `enable` for boot | Railway runs the image's `CMD` and applies `restartPolicyType: ON_FAILURE` from `railway.json` |
+| Network entry and firewall | **Me**: NSG rules (22 from my IP, 80, 443) and Nginx on 80/443 | Railway's edge; there's no firewall for me to manage |
+| TLS | **Me**: certbot, Let's Encrypt certificate on Nginx, renewal timer | Railway issues and renews the certificate for the verified custom domain |
+| Code | **Me**: `git pull` on the VM, restart the service | **Me**: push to `main`; Railway builds and deploys automatically |
+| Configuration | **Me**: `.env` file on the VM read by `EnvironmentFile=` | **Me**: Railway service variables (`DATABASE_URL` reference, `APP_ENV`, `SITE_URL`) |
+| Database software | **Me**: SQLite library, file permissions | Railway runs PostgreSQL 18 (version, process, storage) |
+| Data | **Me**: the `data.db` file and any copies | **Me**: rows, migrations, backups/exports. Railway stores them |
+| DNS | **Me** in Cloudflare: `A @ → 9.205.26.169` | **Me** in Cloudflare: `CNAME @ → Railway`, `_railway-verify` TXT, `www` redirect |
+
+## Rollback
+
+### Code
+
+- **Fast:** Railway dashboard → service → **Deployments** → open the last good deployment → **Redeploy**. Railway runs the old image again, after its pre-deploy migration (a no-op if the schema is already at head).
+- **Lasting:** `git revert <bad-sha>` → run `ruff` and `pytest` locally → push to `main`. This keeps `main` equal to what's live, so the next push doesn't bring the bad change back. Confirm the new deployment ID with `railway deployment list`, then check `/api/health` and the page the change touched.
+
+### Database changes
+
+- **Before any risky data or schema change,** take a dump: `railway run --service Postgres -- sh -c 'pg_dump "$DATABASE_PUBLIC_URL" -Fc -f ~/career-platform-backups/$(date +%F-%H%M).dump'` (outside the repo; the URL is never printed).
+- **Undo a schema migration:** `alembic downgrade -1` against the database only if that migration's `downgrade()` is safe for the data in it. Otherwise ship a new forward migration that fixes it.
+- **Undo a data change:** restore the affected table(s) from the dump, e.g. `pg_restore --clean --if-exists -t '"Project"' -d "$DATABASE_PUBLIC_URL" <file>.dump`.
+
+### Back to the Azure VM, including writes made after cutover
+
+Since 2026-10-08 new contact inquiries are written only to Railway Postgres. The VM's `data.db` doesn't have them, so pointing DNS back at the VM alone would silently drop them. To roll back without losing them:
+
+1. **Freeze writes on Railway:** in the Railway dashboard, scale the web service to 0 replicas, or remove its deployment, so no new inquiry is accepted.
+2. **Export everything from Postgres into a fresh SQLite file** (laptop):
+   ```bash
+   DATABASE_URL=sqlite:///$HOME/career-platform-cutover/rollback.db alembic upgrade head
+   SOURCE="$(railway variables --service Postgres --kv | sed -n 's/^DATABASE_PUBLIC_URL=//p')"
+   python -m app.copy_database "$SOURCE" "sqlite:///$HOME/career-platform-cutover/rollback.db"
+   python -m app.compare_databases "$SOURCE" "sqlite:///$HOME/career-platform-cutover/rollback.db"   # expect 0 changed, 0 missing
+   unset SOURCE
+   ```
+   Postgres holds the original 6 inquiries plus everything written after cutover, so the new file is a superset of the VM's.
+3. **Swap it in on the VM:** `scp` it to the VM, then `sudo systemctl stop career-platform`, `mv data.db data.db.pre-rollback`, `mv rollback.db data.db`, `sudo systemctl start career-platform`, and check `/projects` and `/api/health` with `curl --resolve anarodriguezespinoza.com:443:9.205.26.169 https://anarodriguezespinoza.com/...`.
+4. **Point DNS back:** in Cloudflare replace `CNAME @ → jf53ce39.up.railway.app` with `A @ → 9.205.26.169`, DNS only. The VM's Let's Encrypt certificate covers `anarodriguezespinoza.com` and `www` until 2027-01-04, and certbot can renew it again once the domain resolves to the VM. `www` keeps redirecting to the root. Allow for the 300-second TTL.
+5. Set `SITE_URL=https://anarodriguezespinoza.com` in the VM's `.env` and restart the service.
+
+## Investigated failures
+
+- **Port 8000 unreachable on the Azure VM (real):** [ex03 §3](docs/evidence/ex03.md#3-what-went-wrong), written as symptom → checks → diagnosis → repair → re-check. The NSG had no rule for 8000, so Azure silently dropped the packets. The same cause came back on 2026-10-21, when SSH timed out after my laptop's IP changed ([operate-the-vm §4.0](docs/superpowers/plans/2026-10-01-operate-the-vm.md)).
+- **Custom domain reaching the old VM (simulated lab failure):** [ex05](docs/evidence/ex05.md) is a **simulated** exercise on `site.lab.example`, not this site. A stale A record sent clients to the old VM, which caused a certificate-name mismatch. I diagnosed DNS as the first fault and the TLS error as its consequence.
+- **`www` serving the old Azure copy (real, fixed 2026-10-21):** `www` was a DNS-only A record to the VM, so `https://www…` returned the VM's site instead of the root. Switching the record to proxied let the existing Cloudflare redirect rule answer it ([https-checks.md](docs/evidence/https-checks.md)).
+
+## Remaining limitations
+
+- **On 2026-10-21 the Railway site returned `502 Application failed to respond`.** TLS and DNS are correct; the app container isn't answering. This needs `railway logs` to diagnose, and it blocks the post-cutover checks and the reviewed-change evidence.
+- Admin sign-in, contact-email notifications, and the S3 snapshot fallback are off on Railway (see [What is turned off](#what-is-turned-off)). Content is edited directly in the database.
+- During a database outage only the profile and a notice are shown. Experience, skills, resume, and project detail pages return 503.
+- The CI `e2e` job fails on every push because its Cognito test secrets don't exist. The `app` job, including the Postgres tests, passes.
+- DMARC is `p=none` (report only). It should move to `quarantine` once the aggregate reports stay clean.
+- The VM still holds the 6 contact inquiries in `data.db` and serves its own copy of the site at `9.205.26.169`. That's needed for the Azure requirement and for rollback, but it is a second copy of personal data to delete at cleanup.
+- Railway Postgres's public TCP proxy, used for the copy, should be turned off when it's no longer needed for comparisons or rollback.
+
+## Costs, credits, and cleanup
+
+| Service | Plan / credit | Cost so far | Expires | Cleanup |
+| --- | --- | --- | --- | --- |
+| Azure (`vm-career-platform`, `Standard_B2ats_v2`, Denmark East: VM, OS disk, public IP, NSG, VNet) | Azure for Students credit | **TODO:** from Azure portal → Cost Management | **TODO:** credit end date (portal → Subscriptions → Azure for Students) | After grading: copy `data.db` off the VM, then `az group delete -n rg-career-platform`. Deallocating alone still bills the disk and the public IP |
+| Railway (web service + Postgres) | Trial | **TODO:** Railway → Usage | **TODO:** trial end date (Railway → Account → Plans/Billing) | Before the trial ends, either add a plan or `pg_dump` the database, then delete the project |
+| Cloudflare (DNS, `www` redirect) | Free | $0 | n/a | Keep while the domain is used |
+| Domain `anarodriguezespinoza.com` | **TODO:** registrar and price | **TODO** | **TODO:** renewal date | Turn off auto-renew if no longer wanted |
+| Zoho Mail | Free plan (5 GB) | $0 | n/a | Keep, or remove MX/SPF/DKIM/DMARC before deleting the mailbox |
+| Google Analytics 4 | Free | $0 | n/a | Delete the property if no longer needed |
 
 ## AWS infrastructure (not currently deployed)
 

@@ -57,6 +57,8 @@
   git commit -m "chore: ignore all *.env files"
   ```
 
+**Result (2026-10-08):** committed as `7e940fe` (14:52 PDT), "chore: ignore all *.env files". On 2026-10-19 `90d8101` dropped a duplicate copy of the rule. Re-checked 2026-10-21: `git check-ignore -v 1.env` matches `*.env`; `.env.example` is still tracked.
+
 ---
 
 ### Task 2: Make the image Railway-deployable
@@ -104,6 +106,8 @@
   git commit -m "feat: deploy to Railway with pre-deploy migrations and \$PORT binding"
   ```
 
+**Result (2026-10-08):** committed as `fdc223d` (14:54 PDT): `Dockerfile` `CMD` binds `${PORT:-8000}`, `railway.json` added with `preDeployCommand: alembic upgrade head`, `healthcheckPath: /api/health`, `restartPolicyType: ON_FAILURE`; `docs/deployment.md` gained the Railway section. The local Docker run in Step 3 wasn't recorded at the time. The Railway deploy in Task 5 exercised the same image.
+
 ---
 
 ### Task 3: Prove the schema on Postgres
@@ -137,6 +141,8 @@
   git add tests/test_migrations.py .github/workflows/ci.yml
   git commit -m "test: run migration schema tests against PostgreSQL"
   ```
+
+**Result (2026-10-08):** committed as `aa37396` (14:55 PDT). CI job `app` runs against a `postgres:16` service with `TEST_POSTGRES_URL` set. That job has passed on every push since, most recently run `39502672154` on `9630190` (2026-10-20). (The separate `e2e` job fails on every push because the Cognito E2E secrets were never configured; see the README's remaining limitations.)
 
 ---
 
@@ -193,6 +199,8 @@
   git commit -m "feat: add SQLite-to-Postgres copy tool for the Railway cutover"
   ```
 
+**Result (2026-10-08):** committed as `4e5c814` (14:56 PDT), then `195ff10` (14:58 PDT) so a failed copy never prints inquiry contents (`hide_parameters=True`, error type only). `tests/test_copy_database.py` covers Prisma millisecond timestamps, text timestamps, 0/1 booleans, refusal on a non-empty target, and a Postgres round trip. On 2026-10-21 `app/compare_databases.py` was added to check the copy row by row (see Task 6.6).
+
 ---
 
 ### Task 5: Configure and deploy the Railway web service
@@ -231,6 +239,12 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
   - `curl -sS https://<name>.up.railway.app/api/health` returns `{"status":"ok","database":"up","publicSource":"database"}`.
   - `/` and `/projects` return 200.
 - **Undo:** in the dashboard, use Deployments → Remove on the deployment. The VM is untouched until Task 6.
+
+**Result:**
+- 5.1–5.3: done on 2026-10-08. The README records project `rare-smile`, environment `production`, service `career-platform-ana-rodriguezespinoza`, a Postgres 18 service named `Postgres`, and the three variables `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `APP_ENV=production`, `SITE_URL=https://anarodriguezespinoza.com`.
+- 5.4: Railway's certificate for `anarodriguezespinoza.com` was issued 2026-10-08 21:23 UTC, and the Cloudflare `CNAME @ → jf53ce39.up.railway.app` and `_railway-verify` TXT were created 2026-10-08 22:18–22:19 UTC (see `docs/evidence/dns-records-final.md`).
+- **TODO (needs `railway login`):** record the first successful deployment ID and its pre-deploy log line (`railway deployment list`, `railway logs --deployment <id> | grep "Running upgrade"`).
+- **2026-10-21 18:45 PDT: the custom domain returns `502 Application failed to respond`** from Railway's edge. The deployment needs to be checked and fixed before Task 6's post-cutover checks can be repeated.
 
 ---
 
@@ -273,6 +287,32 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
 - **Why:** deallocation stops compute billing. Disk storage still bills.
 - **Check:** `az vm show -d -g rg-career-platform -n vm-career-platform --query powerState -o tsv` returns `VM deallocated`.
 - **Undo:** `az vm start -g rg-career-platform -n vm-career-platform`, then `sudo systemctl enable --now career-platform`. The SQLite file is unchanged on the VM.
+
+**Result:**
+- 6.1 / 6.2: the VM's `data.db` was last modified **2026-10-06 18:44** (VM time, UTC), before the copy on 2026-10-08, and it still holds `ContactInquiry: 6`, `Project: 0`, `Profile: 0` (checked 2026-10-21). No write reached SQLite after the copy was taken. The app service on the VM is running again (it was restarted for the 2026-10-21 reboot test), so the VM still serves its own copy at `9.205.26.169`. It no longer receives domain traffic, because `@` points at Railway and `www` redirects to `@` (2026-10-22 01:44 UTC).
+- 6.3 / 6.4: **TODO (needs `railway login`):** paste the copy tool's output (`ContactInquiry: 6`, content tables `0`) and the post-cutover health and `/contact` results.
+- 6.5: **not done, on purpose.** The VM stays running: Project 1 requires the Azure deployment to remain up. See the reconciliation note below.
+
+#### 6.6 Compare source and target (added 2026-10-21)
+- **Where:** laptop, repo root
+- **Run:**
+  ```bash
+  scp -i ~/.ssh/isba4775_azure azureuser@9.205.26.169:career-platform/data.db ~/career-platform-cutover/data-2026-10-21.db
+  TARGET="$(railway variables --service Postgres --kv | sed -n 's/^DATABASE_PUBLIC_URL=//p')"
+  .venv/bin/python -m app.compare_databases "sqlite:///$HOME/career-platform-cutover/data-2026-10-21.db" "$TARGET"
+  unset TARGET
+  ```
+- **Why:** row counts alone can't tell a copy from a re-seed. `compare_databases` matches rows by primary key and compares every column after the copy tool's conversions, and prints counts only. The six inquiries, with their original ids and Prisma-era timestamps (one stored as integer milliseconds), can't be produced by `python -m app.seed`, which creates no inquiries. If they match, the original data was transferred.
+- **Check:** `ContactInquiry | 6 | N | 6 | 0 | 0 | N-6`: all 6 source rows `matched`, none `changed` or `missing`. `extra` counts inquiries submitted on Railway after cutover, plus the content rows added on 2026-10-21. Exit code `0`.
+- **Result:** TODO (needs `railway login`).
+
+### Reconciling this plan with the Project 1 requirements (2026-10-21)
+
+This plan was written as a move to Railway's generated domain only, and two of its choices conflict with the course requirements. Where they differ, the requirements win:
+
+1. **"Out of scope: a custom domain"** is superseded. The site runs at `https://anarodriguezespinoza.com` on Railway (Cloudflare `CNAME @`, DNS only, Railway-issued certificate), `www` redirects to the root, and `SITE_URL` is the custom domain.
+2. **Step 6.5 (deallocate the VM)** is not carried out. Project 1 requires the Azure VM to remain running, so the VM stays up with `career-platform` enabled (2 workers, reboot verified 2026-10-21; see the operate-the-vm plan §4). It no longer receives the domain's traffic. Rollback to it is in the README.
+3. **"A real change to the original data before the copy":** the copy on 2026-10-08 moved 6 real contact inquiries and no content rows, so there was nothing to edit in content. A later re-seed can't imitate those inquiries, and 6.6 checks them row by row against the VM's untouched SQLite file. That comparison is the evidence that the original data, not a re-seed, is in Postgres.
 
 ---
 

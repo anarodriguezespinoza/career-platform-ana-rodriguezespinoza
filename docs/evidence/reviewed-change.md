@@ -1,0 +1,49 @@
+# Reviewed change through Railway
+
+**Change:** keep the profile visible during a database outage, show a deliberate empty state, remove invented profile text, and seed only real content.
+**Commit:** `74d7a16` "feat: keep the profile up when the database is down"
+**Railway deployment:** TODO: deployment ID from `railway deployment list` after the push
+
+## 1. Diff review (before committing, 2026-10-21)
+
+Reviewed with `git diff` on `app/routes/public.py`, the three public templates, `app/seed.py`, and the new files.
+
+| Question | Finding |
+| --- | --- |
+| Does the outage path only affect what it should? | Only `/`, `/about`, and `/projects` catch `PublicContentUnavailableError`. Every other public page still raises it and gets the existing 503 "temporarily unavailable" page. Admin and `/api/health` are unchanged |
+| Could the fallback leak private data? | No. `app/content/profile.json` holds only what the public resume page already shows (name, headline, summary, location, public email, education, LinkedIn and GitHub URLs). It never reads drafts or inquiries |
+| Is the status right? | `503` whenever the live read and the snapshot both failed, `200` otherwise. Railway's health check uses `/api/health`, so a 503 page can't block a deploy |
+| Does it recover without a restart? | Nothing is cached between requests: every request tries the database first. Pinned by `test_recovers_without_restart_when_database_returns` |
+| Invented text left in templates? | Removed: "Building thoughtful digital products…", "A portfolio of experience…", `hello@example.com`, "Available remotely", "Professional summary unavailable." Pinned by `test_missing_profile_row_shows_no_invented_text` |
+| Seed safety | Seed rows are real (from the resume page), keyed by fixed ids and only inserted when missing, so re-running never duplicates or overwrites. The invented "Software Engineer at Career Platform, 2024" entry is gone. Pinned by `test_seed_is_real_idempotent_and_renders` |
+| Packaging | `content/*.json` added to `package-data`; the Docker image copies `app/` whole, so the file ships either way |
+
+## 2. Local check (before pushing, 2026-10-21)
+
+```text
+$ .venv/bin/ruff check app tests e2e migrations
+All checks passed!
+$ .venv/bin/pytest -q
+118 passed, 3 skipped in 1.27s
+```
+
+The 3 skipped tests are the Postgres ones that need `TEST_POSTGRES_URL`. CI's `app` job runs them against `postgres:16`.
+
+New tests written first and seen failing (4 failed, 12 passed) before the implementation:
+`test_database_failure_keeps_profile_visible_and_returns_503`, `test_recovers_without_restart_when_database_returns`, `test_empty_projects_table_shows_empty_state`, `test_missing_profile_row_shows_no_invented_text`, `test_profile_shows_education_and_links`.
+
+## 3. Behavior observed at the domain after the deploy
+
+TODO after the push and Railway deploy:
+
+| Check | Command | Expected | Observed |
+| --- | --- | --- | --- |
+| Deploy went live | `railway deployment list` | new deployment `SUCCESS`, matching commit | |
+| Health | `curl -sS https://anarodriguezespinoza.com/api/health` | `{"status":"ok","database":"up","publicSource":"database"}` | |
+| Real project | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "This website (in progress)"` | match (after the seed is run on production) | |
+| Education and links | `curl -sS https://anarodriguezespinoza.com/about \| grep -o "Loyola Marymount University"` | match | |
+| No invented text | `curl -sS https://anarodriguezespinoza.com/about \| grep -c "hello@example.com"` | `0` | |
+
+## 4. How to undo it
+
+Code: redeploy the previous deployment in Railway, or `git revert <sha>` and push (README → Rollback). Data: the seed only inserts rows with ids `profile-ana`, `experience-hatch`, `experience-ey`, `experience-romo-cabrini`, `project-this-website`, `skill-python`, `resume-settings-default`. Delete those ids (child `ProjectTechnology` rows first) to remove it.

@@ -173,3 +173,60 @@ Nothing below touches files in the git repo — `.env` is already git-ignored, a
 ---
 
 Not covered here, by your request: actually killing the app or nginx to watch them restart, and rebooting the VM to confirm boot behavior — you said you'd run those yourself.
+
+---
+
+## 4. Follow-up (2026-10-21): workers and a controlled reboot
+
+### 4.0 Restore SSH access
+- **Where:** laptop
+- **Run:** `az network nsg rule update -g rg-career-platform --nsg-name vm-career-platform-nsg -n Allow-SSH-Laptop --source-address-prefixes <current-laptop-ip>/32`
+- **Why:** my laptop's public IP had changed (`157.242.208.225` → `157.242.208.31`), so the NSG silently dropped SSH. This is the same failure as the coffee-shop question in [ex03](../../evidence/ex03.md).
+
+**Result (2026-10-21, about 18:18 PDT):** rule `Allow-SSH-Laptop` now allows `157.242.208.31/32` on port 22 only. `ssh -i ~/.ssh/isba4775_azure azureuser@9.205.26.169` connected.
+
+### 4.1 Run the app with multiple workers
+- **Where:** VM
+- **Run:**
+  ```bash
+  sudo cp /etc/systemd/system/career-platform.service /etc/systemd/system/career-platform.service.bak-2026-10-21
+  sudo sed -i 's#--host 127.0.0.1 --port 8000$#--host 127.0.0.1 --port 8000 --workers 2#' /etc/systemd/system/career-platform.service
+  sudo systemctl daemon-reload && sudo systemctl restart career-platform
+  ```
+- **Why:** `nproc` is `2` on `Standard_B2ats_v2`, so two uvicorn worker processes can each handle requests. If one worker hangs on a slow request, the other keeps answering. SQLite allows many readers at once, which is all the public pages do.
+- **Check:** `grep ExecStart` shows `--workers 2`; the process list shows one uvicorn supervisor and two `multiprocessing.spawn` worker processes.
+- **Undo:** `sudo mv /etc/systemd/system/career-platform.service.bak-2026-10-21 /etc/systemd/system/career-platform.service && sudo systemctl daemon-reload && sudo systemctl restart career-platform`
+
+**Result (2026-10-21, about 18:20 PDT):** `ExecStart=/home/azureuser/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2`. `systemctl is-active career-platform` → `active`. `pgrep` listed the uvicorn supervisor (PID 159734) and two worker processes (PIDs 159736, 159737). `curl http://127.0.0.1:8000/api/health` → `{"status":"ok","database":"up","publicSource":"database"}`.
+
+### 4.2 Page-level check that the site reads its database
+- **Where:** laptop, then VM logs
+- **Run:**
+  ```bash
+  curl -sS -o /dev/null -w '%{http_code}\n' --resolve www.anarodriguezespinoza.com:443:9.205.26.169 https://www.anarodriguezespinoza.com/projects
+  ssh ... 'sudo journalctl -u career-platform --since "-2min" | grep public_content'
+  ```
+- **Why:** `/api/health` only proves the app can open a connection. `/projects` renders from a real query of published content. This deployment has no snapshot bucket (`S3_SNAPSHOT_BUCKET` is empty in `.env`), so if the database read failed, the page would return `503`. A `200` together with the app's own `public_content_source` log line shows the page came from SQLite.
+
+**Result (2026-10-21 18:21:57 PDT, before the reboot):** `/` → `200`, `/projects` → `200`. The journal showed two `"event": "public_content_source", "fields": {"source": "database"}` lines for those two requests. The VM's content tables are empty (0 Profile, 0 Project rows; the 6 ContactInquiry rows are private), so the pages show no projects. The check proves the read path works, not that content exists.
+
+### 4.3 Controlled reboot
+- **Where:** VM, then laptop
+- **Run:** `sudo systemctl reboot`, wait, then repeat 4.1's checks and 4.2.
+- **Check:** boot time changes; `nginx` and `career-platform` are `active` and `enabled` without anyone starting them; health and pages return `200` and log `source: database`.
+
+**Result (2026-10-21):**
+- 18:22:17 PDT: previous boot `2026-10-01 21:04:00` (UTC); reboot issued.
+- New boot `2026-10-22 01:22:26` UTC (18:22:26 PDT). On first SSH after the boot: `nginx` `active`/`enabled`, `career-platform` `active`/`enabled`, two workers running, `/api/health` → `{"status":"ok","database":"up","publicSource":"database"}`.
+- 18:25:24 PDT from the laptop through Nginx and TLS: `/api/health` `200`, `/` `200`, `/projects` `200`. The journal for this boot (`journalctl -u career-platform -b`) shows two `"source": "database"` lines. The site and its database came back with no manual step.
+
+## 5. Why the restart worked
+
+Four pieces of configuration, each written down above:
+
+1. **`systemctl enable` on both units** (2.3, and nginx is enabled by its package). `enable` creates a symlink in `multi-user.target.wants/`, so systemd starts the unit at every boot. Without it, the app would only run until the first reboot, as it did when I started it by hand in ex03.
+2. **The app's unit file** (2.2): `WorkingDirectory` and `ExecStart` point at the repo and `uv`, `User=azureuser` keeps it off root, `After=network.target` orders it after networking, and `Restart=on-failure` with `StartLimitIntervalSec=0` restarts it if it crashes during boot.
+3. **`EnvironmentFile=/home/azureuser/career-platform/.env`**: systemd reads `DATABASE_URL` (the SQLite file `data.db` on the VM's persistent OS disk) and `SITE_URL` from this file on every start. Nobody has to export variables in a shell. The database is a file on a managed disk, so it survives the reboot unchanged.
+4. **Nginx's site config** (1.2, later extended by certbot for 443): it lives in `/etc/nginx/sites-enabled/`, which nginx loads at start. It listens on 80 and 443 and forwards to `127.0.0.1:8000`, and the Let's Encrypt certificate files are on disk.
+
+The NSG rules (22 from my laptop, 80 and 443 from anywhere) are Azure resources outside the VM, so a reboot doesn't touch them.

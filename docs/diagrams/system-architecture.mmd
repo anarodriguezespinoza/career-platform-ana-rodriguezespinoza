@@ -1,35 +1,29 @@
+%% Current system (Railway). The AWS design this file showed before 2026-10-21 is in git history and in infra/.
 flowchart LR
-  browser[Browser]
-  next[FastAPI app\nroutes, Jinja templates, admin forms]
-  cognito[Cognito\nowner identity]
-  prisma[SQLAlchemy repositories]
-  rds[(RDS PostgreSQL)]
-  projection[Published public projection\nbuildPublicContent]
-  s3[(Private versioned S3\npublic/content.json)]
-  ses[SES v2]
-  inquiry[ContactInquiry\nprivate data]
-  health[/api/health]
-
-  browser --> next
-  next -. admin token .-> cognito
-  next --> prisma
-  prisma --> rds
-  next --> projection
-  projection --> s3
-  next --> inquiry
-  inquiry --> ses
-  inquiry --> rds
-  health --> prisma
-  health -. database down .-> s3
-  s3 -. validated snapshot .-> next
-
-  subgraph PublicRead[Public read path]
-    projection
-    s3
+  browser[Visitor browser]
+  cf[Cloudflare DNS\nCNAME @ → Railway, DNS only\nwww proxied → 301 to root]
+  subgraph railway[Railway project rare-smile · production]
+    edge[Railway edge\nTLS, Let's Encrypt cert\nhttp → https]
+    app[FastAPI app container\nuvicorn on $PORT\nJinja templates, /api]
+    pg[(PostgreSQL 18\npostgres.railway.internal)]
+    predeploy[[pre-deploy: alembic upgrade head]]
   end
+  profile[(app/content/profile.json\nprofile while DB is down)]
+  github[GitHub main] -->|push triggers build| railway
+  ga[Google Analytics 4]
+  zoho[Zoho Mail\nMX, SPF, DKIM, DMARC]
+  sender[Outside mail servers]
 
-  subgraph PrivateWrite[Authenticated/private paths]
-    cognito
-    inquiry
-    ses
+  browser -->|DNS UDP 53| cf
+  browser -->|HTTPS 443| edge
+  edge -->|HTTP + X-Forwarded-Proto| app
+  app -->|SQL over TCP, private network| pg
+  predeploy --> pg
+  app -.->|DB down| profile
+  browser -.->|after consent, HTTPS 443| ga
+  sender -->|SMTP 25 via MX| zoho
+  zoho -->|SMTP, DKIM signed| sender
+
+  subgraph azure[Azure · Denmark East · kept running, not in the request path]
+    vm[vm-career-platform\nNginx 443 → uvicorn 127.0.0.1:8000\nSQLite data.db, rollback copy]
   end
