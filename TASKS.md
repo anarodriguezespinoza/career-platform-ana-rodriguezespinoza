@@ -56,7 +56,7 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 
 ## 7. Google Analytics
 
-- [ ] Record the action performed, the event observed, why it's useful, and the date → `docs/evidence/ex06.md` §3
+- [x] Record the action performed, the event observed, why it's useful, and the date → `docs/evidence/ex06.md` §3
 - [x] Explain the browser → GA collection path, including the consent gate → `docs/evidence/ex06.md` or README
 
 ## 8. Engineering record
