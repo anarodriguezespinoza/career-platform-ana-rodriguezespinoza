@@ -47,8 +47,8 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 
 ## 6. Zoho email
 
-- [ ] Header analysis → `docs/evidence/zoho-header-check.md`
-- [ ] Before-MX message and what happened to it → one line in `docs/evidence/ex06.md`
+- [x] Header analysis → `docs/evidence/zoho-header-check.md`
+- [x] Before-MX message and what happened to it → one line in `docs/evidence/ex06.md`
 - [x] Explain MX, SPF, DKIM, and DMARC → `docs/evidence/ex06.md` or README
 - [x] DNS dump after the mail records were added → `docs/evidence/`
 - [x] The reply shows the custom address as the sender → `docs/evidence/ex06.md`
