@@ -44,7 +44,7 @@ Pushed 2026-10-25 22:16 PDT (`9630190..57209d8 main -> main`); observed 2026-10-
 | Education and links | `curl -sS https://anarodriguezespinoza.com/about \| grep -o …` | `Loyola Marymount University`, LinkedIn and GitHub URLs | all three present (new behavior; before this deploy `/about` had no education or links) |
 | No invented text | `curl -sS https://anarodriguezespinoza.com/about \| grep -c "hello@example.com"` | `0` | `0` |
 | Empty state | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "No projects are published yet."` | match while production has no project rows | match (new behavior; before, the grid was silently empty) |
-| Real project | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "This website (in progress)"` | match after `app.seed` runs on production | TODO after the seed |
+| Real project | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "This website (in progress)"` | match after `app.seed` runs on production | match at 2026-10-26 05:31 UTC, after the seed ran at 05:30 UTC. `/projects/this-website` `200`; `/experience` lists Hatch Baby, EY, Romo & Cabrini and no "Career Platform"; `/api/resume` now returns `application/pdf` because a published Profile and ResumeSettings exist |
 
 ## 4. How to undo it
 

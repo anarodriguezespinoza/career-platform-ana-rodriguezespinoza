@@ -290,7 +290,7 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
 
 **Result:**
 - 6.1 / 6.2: the VM's `data.db` was last modified **2026-10-06 18:44** (VM time, UTC), before the copy on 2026-10-08, and it still holds `ContactInquiry: 6`, `Project: 0`, `Profile: 0` (checked 2026-10-21). No write reached SQLite after the copy was taken. The app service on the VM is running again (it was restarted for the 2026-10-21 reboot test), so the VM still serves its own copy at `9.205.26.169`. It no longer receives domain traffic, because `@` points at Railway and `www` redirects to `@` (2026-10-22 01:44 UTC).
-- 6.3 / 6.4: no output from the copy run was saved. Whether the 6 inquiries are in Postgres is checked by 6.6 (comparison), using the VM file copied on 2026-10-25 (`~/career-platform-cutover/data-2026-10-25.db`, SHA-256 prefix `441d75db11ac6706`, identical to the VM's `data.db`; 6 ContactInquiry rows, 1 with integer and 5 with text `createdAt`, and 0 content rows). Post-cutover checks on 2026-10-25 after the recovery: `/api/health` `ok`, `/` `200` (`docs/evidence/https-checks.md`).
+- 6.3 / 6.4: no output from the copy run was saved, but 6.6 shows that it ran and was complete: all 6 inquiries are in Postgres unchanged. Whether the 6 inquiries are in Postgres is checked by 6.6 (comparison), using the VM file copied on 2026-10-25 (`~/career-platform-cutover/data-2026-10-25.db`, SHA-256 prefix `441d75db11ac6706`, identical to the VM's `data.db`; 6 ContactInquiry rows, 1 with integer and 5 with text `createdAt`, and 0 content rows). Post-cutover checks on 2026-10-25 after the recovery: `/api/health` `ok`, `/` `200` (`docs/evidence/https-checks.md`).
 - 6.5: **not done, on purpose.** The VM stays running: Project 1 requires the Azure deployment to remain up. See the reconciliation note below.
 
 #### 6.6 Compare source and target (added 2026-10-21)
@@ -304,7 +304,7 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
   ```
 - **Why:** row counts alone can't tell a copy from a re-seed. `compare_databases` matches rows by primary key and compares every column after the copy tool's conversions, and prints counts only. The six inquiries, with their original ids and Prisma-era timestamps (one stored as integer milliseconds), can't be produced by `python -m app.seed`, which creates no inquiries. If they match, the original data was transferred.
 - **Check:** `ContactInquiry | 6 | N | 6 | 0 | 0 | N-6`: all 6 source rows `matched`, none `changed` or `missing`. `extra` counts inquiries submitted on Railway after cutover, plus the content rows added on 2026-10-21. Exit code `0`.
-- **Result:** TODO: paste the output of the production checks script here and in `docs/evidence/migration-comparison.md`.
+- **Result (2026-10-25 22:26 PDT):** `ContactInquiry | 6 | 10 | 6 | 0 | 0 | 4`: all 6 source rows matched, none changed or missing, and 4 inquiries were written on Railway after cutover. `Skill | 0 | 2 | 0 | 0 | 0 | 2`: two skills added directly in Postgres after cutover. Every other table is `0 | 0`. Full output: `docs/evidence/migration-comparison.md`. Public Access was turned on for this run only.
 
 ### Reconciling this plan with the Project 1 requirements (2026-10-21)
 
@@ -355,7 +355,7 @@ Railway reported a platform outage with a security notice on 2026-10-21. Builds 
   SELECT extname FROM pg_extension;
   ```
 - **Check:** only the app's sessions and your own; no unexpected roles or extensions; the inquiry count is 6 plus the inquiries submitted on Railway since cutover. Then run 6.6 (`compare_databases`): the 6 original inquiries must still be `matched`, not `changed`. Search the deploy logs for `authentication failed`. PostgreSQL doesn't log successful logins by default, so a clean search doesn't prove there was no access.
-- **Result:** TODO. If anything is unexpected: record it, keep a `pg_dump`, and note that the inquiries hold visitors' names, emails, and messages.
+- **Result (2026-10-25 22:26 PDT):** roles: only `postgres`. Extensions: only `plpgsql`. Sessions: one, `postgres` from `100.64.0.1` (Railway's TCP proxy, i.e. the checks script itself). `ContactInquiry` = 10, which is the 6 original rows (all `matched` by 6.6, so none were altered) plus 4 post-cutover submissions. Nothing unexpected. As the guide warns, Postgres doesn't log successful logins, so this shows no sign of misuse but can't prove there was none. Public Access was already off during the incident (R.3), which limited the old password to Railway's private network.
 
 #### R.7 Re-run the checks
 - Re-run the commands in `docs/evidence/https-checks.md` and add a dated "after recovery" section, then fill in `docs/evidence/reviewed-change.md` §3.

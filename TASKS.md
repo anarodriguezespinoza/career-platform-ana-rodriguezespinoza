@@ -9,7 +9,7 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 - [x] No hard-coded profile text when the profile row is missing → `app/templates/public/home.html`
 - [x] Recovery without restart is tested (fail DB, then restore, then refresh returns 200 with projects) → `tests/test_public_routes.py`
 - [x] Seed doesn't invent experience: label or remove the "Software Engineer at Career Platform, 2024" entry → `app/seed.py`
-- [ ] A real project entry exists in the live database (e.g. "This website, in progress," labeled) → check: `/projects` on the live site
+- [x] A real project entry exists in the live database (e.g. "This website, in progress," labeled) → check: `/projects` on the live site
 - [x] Profile shows education and professional links → check: live home and about pages
 - [x] The initial choice of database engine (SQLite) is written down with the reason → README decisions section
 
@@ -31,10 +31,10 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 
 ## 4. Railway and PostgreSQL migration
 
-- [ ] Fill in Result lines for Tasks 1–6 → `docs/superpowers/plans/2026-10-08-railway-postgres-migration.md`
-- [ ] Make one real change to the original data before the copy, so a re-seed can't pass as the transferred database → recorded in the migration plan
-- [ ] Compare source and target records: row counts, content, rendered page → `docs/evidence/` comparison
-- [ ] Cutover log and post-cutover checks → migration plan Task 6 results
+- [x] Fill in Result lines for Tasks 1–6 → `docs/superpowers/plans/2026-10-08-railway-postgres-migration.md`
+- [x] Make one real change to the original data before the copy, so a re-seed can't pass as the transferred database → recorded in the migration plan *(the copy had already run on 2026-10-08, so this is met differently: the 6 original inquiries, which the seed can't create, match row for row; see the plan's reconciliation note 3 and `docs/evidence/migration-comparison.md`)*
+- [x] Compare source and target records: row counts, content, rendered page → `docs/evidence/` comparison
+- [x] Cutover log and post-cutover checks → migration plan Task 6 results
 - [x] Rollback procedure that accounts for writes after cutover (contact inquiries) → README rollback section
 - [x] Responsibilities comparison, Azure vs Railway (OS, runtime, entry point, TLS, code, config, DB software, data, DNS) → README
 - [x] Reconcile the plan with the requirements: the custom domain is listed as "Out of scope," and step 6.5 deallocates the VM → note in the migration plan
