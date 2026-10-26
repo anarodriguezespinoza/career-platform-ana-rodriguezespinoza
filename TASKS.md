@@ -61,7 +61,7 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 
 ## 8. Engineering record
 
-- [ ] Submission index with repository URL, live URL, final SHA, and links for items 1–8 → `docs/project-1-submission.md`
+- [x] Submission index with repository URL, live URL, final SHA, and links for items 1–8 → `docs/project-1-submission.md`
 - [x] README links the spec, plans, ex03, ex05, ex06, zoho-header-check, `how-this-site-is-secured.md`, and the submission index → `README.md`
 - [x] Azure and Railway architecture diagrams with locations, protocols, ports, data flow, and the email and analytics paths (current diagrams show AWS) → `docs/diagrams/`
 - [x] README rollback section (code and data) → `README.md`
