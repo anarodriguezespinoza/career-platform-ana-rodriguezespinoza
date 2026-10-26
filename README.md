@@ -208,6 +208,16 @@ Since 2026-10-08 new contact inquiries are written only to Railway Postgres. The
 - The VM still holds the 6 contact inquiries in `data.db` and serves its own copy of the site at `9.205.26.169`. That's needed for the Azure requirement and for rollback, but it is a second copy of personal data to delete at cleanup.
 - Railway Postgres's public TCP proxy, used for the copy, should be turned off when it's no longer needed for comparisons or rollback.
 
+## Reflection
+
+It was helpful to run the site on an azure virtual machine first because it allowed me to understand and experience the many responsibilities of managing a platform end-to-end. I had to set up the inbound port rules and set it up in a way to keep the site running after a reboot, configure Nginx, and set up automatic certificate renewal. After moving the site to Railway, most of these tasks were taken care of by the platform, which simplified everything and made it much easier to deploy code without worrying about updating a port rule. 
+
+It was really helpful to have a migration plan because it helped me understand which responsibilities I still had to manage, including the code, configuration, data, and DNS.
+
+The most challenging part of the migration was transferring the data. The SQLite database contained different information that could’ve been seen as contradictory. A simple copy of it could have caused errors or resulted in lost data, and recreating the database with new entries would not have preserved the original information. Therefore, I created a copy tool and tested it to make sure the transfer worked correctly. I also compared the records individually to confirm that the data had transferred successfully.
+
+Another important lesson was to always verify results even if AI says everything passes. Sometimes Claude would mark tests as passed even when they were not working correctly. When it ran checks for, the /api/health endpoint, it also passed its checks even when other pages could still fail. Another case was when the www domain loaded successfully, but it was connected to the wrong server, so that had to be updated. Seeing this happen taught me to make a record of the exact command that was run, its output, and the date of everything that gets implemented or changed. Another takeaway is that its ok to mark results as unverified when I do not have enough evidence to confirm them.
+
 ## Costs, credits, and cleanup
 
 | Service | Plan / credit | Cost so far | Expires | Cleanup |

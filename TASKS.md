@@ -69,5 +69,5 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 - [x] README decisions: Railway migration, managed vs self-hosted email, plus alternatives and reasons → `README.md`
 - [x] README investigated failures: link ex03 (expand symptom → checks → diagnosis → repair → re-check) and ex05 (label it a simulated lab failure) → `README.md`, `docs/evidence/ex03.md`
 - [x] README remaining limitations → `README.md`
-- [ ] README reflection → `README.md`
+- [x] README reflection → `README.md`
 - [x] README costs, credits, expiry dates (including the Railway trial end date), and cleanup plan → `README.md`
