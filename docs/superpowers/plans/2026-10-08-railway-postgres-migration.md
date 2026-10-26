@@ -326,25 +326,25 @@ Railway reported a platform outage with a security notice on 2026-10-21. Builds 
 - **Where:** laptop, then Railway dashboard
 - **Run:** `railway login`, then `railway link --project rare-smile --environment production --service career-platform-ana-rodriguezespinoza`. In the dashboard: railway.com/account → reconnect GitHub. Accept any pending permission update at github.com/apps/railway-app/installations/new. Open the web service → Settings → Source and confirm repo `anarodriguezespinoza/career-platform-ana-rodriguezespinoza`, branch `main`, and that autodeploy is **enabled**.
 - **Check:** `railway status` names the project, environment, and service.
-- **Result:** TODO
+- **Result:** done 2026-10-25. `railway status` shows project `rare-smile`, environment `production`, service `career-platform-ana-rodriguezespinoza` in region `iad`. Reconnecting GitHub found no pending permissions to accept.
 
 #### R.3 Turn off Postgres public access
 - **Where:** Postgres service → Settings → Networking
 - **Run:** disable **Public Access** (the TCP proxy). Turn it back on only for 6.6 or a rollback export, then off again.
 - **Why:** while it's on, a leaked password works from anywhere.
-- **Result:** TODO
+- **Result:** already off on 2026-10-25. The Postgres service has no `DATABASE_PUBLIC_URL` and no `RAILWAY_TCP_PROXY_DOMAIN`, so the old password only worked from inside the project's private network.
 
 #### R.4 Rotate the Postgres password
 - **Where:** Postgres service → Database → Config → Connection
 - **Run:** click **Regenerate**. Don't edit `POSTGRES_PASSWORD`/`PGPASSWORD` by hand and don't run `ALTER USER`, because that puts the variable and the database out of sync.
 - **Why:** Railway recommends it after the security notice. The web service uses the reference `${{Postgres.DATABASE_URL}}`, so it picks up the new password on its next deploy. Nothing else holds a pasted copy (the copy and compare commands read `DATABASE_PUBLIC_URL` fresh each time).
 - **Check:** the database restarts; the web service fails to connect until R.5.
-- **Result:** TODO
+- **Result:** done 2026-10-25 22:05 PDT. Regenerate redeployed Postgres (`8907765b`) and, at the same moment, the web service (`01fa9b77`). The Postgres logs contain no `authentication failed`.
 
 #### R.5 Redeploy the web service
 - **Run:** push `main` (it holds the commits not yet deployed), or `railway redeploy --service career-platform-ana-rodriguezespinoza`.
 - **Check:** `railway deployment list` shows a new `SUCCESS` deployment; deploy logs show `alembic upgrade head` finishing and no `password authentication failed`; `curl -sS https://anarodriguezespinoza.com/api/health` → `{"status":"ok","database":"up","publicSource":"database"}`. Record the deployment ID in `docs/evidence/reviewed-change.md`.
-- **Result:** TODO
+- **Result:** done 2026-10-25, with one extra fix. After R.4 the site still returned `502` although `01fa9b77` was `SUCCESS`. Its logs showed `Uvicorn running on http://0.0.0.0:8080`, while `railway domain status anarodriguezespinoza.com` showed target port `8000`. The Dockerfile listens on `${PORT:-8000}`, so Railway had started setting `PORT=8080`, which also explains the `502` since 2026-10-21. The health check still passed because Railway probes the port the app actually listens on. Fix: `railway variables --set PORT=8000` on the web service, then `railway redeploy`. Deployment `ac5a2f78` is `SUCCESS` (commit `9630190`), its logs show port `8000` and no `password authentication failed`, `/` returns `200`, and `/api/health` returns `{"status":"ok","database":"up","publicSource":"database"}`, so the app connects with the new password. The three local commits after `9630190` are not yet pushed or deployed.
 
 #### R.6 Look for misuse
 - **Run:** `railway connect Postgres`, then:

@@ -19,10 +19,11 @@ A FastAPI application with server-rendered Jinja templates and SQLAlchemy/Alembi
 - **Migrations:** `alembic upgrade head` runs as the pre-deploy command, once per deploy before traffic moves. Containers never migrate on start-up.
 - **Health check:** Railway checks `/api/health` before the new deploy goes live, and restarts the service on failure.
 
-The web service has three variables:
+The web service has four variables:
 
 | Variable | Value |
 | --- | --- |
+| `PORT` | `8000`, pinned so the app listens on the port the custom domain targets (Railway's default became `8080` after the 2026-10-21 incident) |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}`, a reference that Railway resolves to the private `postgres.railway.internal` URL |
 | `APP_ENV` | `production` (marks the session cookie `Secure`) |
 | `SITE_URL` | `https://anarodriguezespinoza.com`, used for canonical URLs, `robots.txt`, and the sitemap |
@@ -188,18 +189,18 @@ Since 2026-10-08 new contact inquiries are written only to Railway Postgres. The
 
 - **Port 8000 unreachable on the Azure VM (real):** [ex03 §3](docs/evidence/ex03.md#3-what-went-wrong), written as symptom → checks → diagnosis → repair → re-check. The NSG had no rule for 8000, so Azure silently dropped the packets. The same cause came back on 2026-10-21, when SSH timed out after my laptop's IP changed ([operate-the-vm §4.0](docs/superpowers/plans/2026-10-01-operate-the-vm.md)).
 - **Custom domain reaching the old VM (simulated lab failure):** [ex05](docs/evidence/ex05.md) is a **simulated** exercise on `site.lab.example`, not this site. A stale A record sent clients to the old VM, which caused a certificate-name mismatch. I diagnosed DNS as the first fault and the TLS error as its consequence.
-- **Live site returning 502 (real, 2026-10-21, caused by Railway, waiting on Railway):**
+- **Live site returning 502 (real, 2026-10-21 to 2026-10-25, Railway incident plus a port mismatch, fixed):**
   - *Symptom:* `https://anarodriguezespinoza.com/` returned `HTTP/2 502`, `server: railway-hikari`, body `"Application failed to respond"`. `/api/health` returned the same.
   - *Checks:* DNS was correct (`CNAME @ → jf53ce39.up.railway.app`, resolving to `69.46.46.19`). TLS was correct (Railway's Let's Encrypt certificate for `anarodriguezespinoza.com` verified, valid until 2027-01-06). So the request reached Railway's edge and the edge had no healthy app to forward it to. `railway status` failed with `Your saved login is no longer valid (grant request is invalid)`, so the CLI couldn't read logs. Railway's status page showed a **Major Outage**: Builds in every region and the API (`backboard.railway.com`) down, with a security notice and guides recommending, among other things, rotating PostgreSQL credentials and reconnecting GitHub after a credential reset.
   - *Diagnosis:* a Railway platform incident, not a fault in this app or its DNS. The invalidated CLI login fits Railway's credential reset.
   - *What I checked on my side:* the GitHub repository has no deploy keys, webhooks, or Actions secrets, I'm the only collaborator, and every recent push and branch event is mine. This app's Railway service has no third-party API keys (no OpenAI, Anthropic, Stripe, or AWS variables), so the only Railway-held secret that matters is the Postgres password.
   - *Repair (when Railway builds are back):* the steps are in the [migration plan, "Recovering from the Railway incident"](docs/superpowers/plans/2026-10-08-railway-postgres-migration.md#recovering-from-the-railway-incident-2026-10-21). In short: log in again, reconnect GitHub, rotate the Postgres password, redeploy, then re-run the HTTPS checks.
-  - *Re-check:* TODO once recovered: `curl -sSI https://anarodriguezespinoza.com/` → `200`, `/api/health` → `ok`.
+  - *Repair (2026-10-25):* logged in again and rotated the Postgres password with **Regenerate** (public access was already off). The site still returned `502` after the redeploy. The deploy logs showed Uvicorn on port `8080`, but the custom domain targets `8000`: the Dockerfile uses `${PORT:-8000}` and Railway now sets `PORT=8080`. Pinning `PORT=8000` on the web service and redeploying fixed it (deployment `ac5a2f78`).
+  - *Re-check (2026-10-25):* `/` → `200`; `/api/health` → `{"status":"ok","database":"up","publicSource":"database"}`, so the app connects with the new password; no `authentication failed` in the Postgres or deploy logs.
 - **`www` serving the old Azure copy (real, fixed 2026-10-21):** `www` was a DNS-only A record to the VM, so `https://www…` returned the VM's site instead of the root. Switching the record to proxied let the existing Cloudflare redirect rule answer it ([https-checks.md](docs/evidence/https-checks.md)).
 
 ## Remaining limitations
 
-- **Since 2026-10-21 the Railway site returns `502 Application failed to respond`** because of a Railway platform outage (see [Investigated failures](#investigated-failures)). Until Railway builds are back, the site is down and the post-cutover checks and the reviewed-change deploy can't be completed. The Azure VM is a working fallback (see [Rollback](#rollback)), but I chose not to switch DNS to it.
 - Admin sign-in, contact-email notifications, and the S3 snapshot fallback are off on Railway (see [What is turned off](#what-is-turned-off)). Content is edited directly in the database.
 - During a database outage only the profile and a notice are shown. Experience, skills, resume, and project detail pages return 503.
 - The CI `e2e` job fails on every push because its Cognito test secrets don't exist. The `app` job, including the Postgres tests, passes.
