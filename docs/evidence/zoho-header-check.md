@@ -30,8 +30,62 @@ DMARC:        'PASS'
 | DKIM | `PASS with domain anarodriguezespinoza.com` | The message carried a DKIM signature with `d=anarodriguezespinoza.com`. Gmail fetched the public key from DNS (selector `zmail`, record `zmail._domainkey.anarodriguezespinoza.com`) and the signature verified, so the signed headers and body weren't changed after Zoho signed them |
 | DMARC | `PASS` | DMARC needs SPF or DKIM to pass **with a domain that matches `From:`**. DKIM's `d=` is exactly `anarodriguezespinoza.com`, the `From:` domain, so DMARC passes on DKIM alone, whatever envelope sender SPF checked. With `p=none` a failure would still have been delivered, but it would have shown up in the aggregate reports |
 
+## Hop-by-hop path (from the raw headers below)
+
+`Received:` lines are added at the top by each server, so they read bottom to top:
+
+| # | Time (PDT) | From → by | Protocol | What happened |
+| --- | --- | --- | --- | --- |
+| 1 | 19:48:48 | `mail.zoho.com` → `mx.zohomail.com` | SMTP (internal) | My reply left Zoho's web mail and entered Zoho's mail system. Zoho added `DKIM-Signature` (`d=anarodriguezespinoza.com; s=zmail`) and its own ARC set (`i=1`, `d=zohomail.com`), which records `spf=pass dkim=pass dmarc=pass` as Zoho saw it |
+| 2 | 19:48:52 | `sender6-of-o52.zoho.com [165.173.180.52]` → `mx.google.com` | ESMTPS, **TLS 1.3**, `TLS_AES_256_GCM_SHA384` | Zoho's outbound server delivered to Gmail's MX, encrypted in transit. Gmail ran SPF, DKIM, and DMARC here and wrote `Received-SPF` and `Authentication-Results` |
+| 3 | 19:48:52 | inside Google (`by 2002:a05:…`) | SMTP over IPv6, internal | Gmail moved the message to my mailbox (`Delivered-To`) and sealed its own ARC set (`i=2`, `d=google.com`) |
+
+From `Date:` (19:48:48) to delivery (19:48:52) took 4 seconds, matching Gmail's "Delivered after 4 seconds".
+
+## What each check used, from the raw headers
+
+- **SPF:** `Return-Path: <ana@anarodriguezespinoza.com>` is the envelope sender (`smtp.mailfrom`). Gmail looked up the SPF record of `anarodriguezespinoza.com` and found the connecting IP `165.173.180.52` allowed through `include:zohomail.com`: `Received-SPF: pass … client-ip=165.173.180.52`. The `Return-Path` domain equals the `From:` domain, so SPF is **aligned** too (`spfdomain=anarodriguezespinoza.com`).
+- **DKIM:** `DKIM-Signature: … s=zmail; d=anarodriguezespinoza.com; i=ana@anarodriguezespinoza.com; h=Date:From:To:Message-ID:Subject:…; bh=aALFB1…`. `h=` lists the signed headers (From, To, Subject, Date, Message-ID and others), and `bh=` is the hash of the body. Gmail fetched the key from `zmail._domainkey.anarodriguezespinoza.com` and got `dkim=pass header.i=@anarodriguezespinoza.com header.s=zmail header.b=FJHXlCwn`. The `header.b` value matches the start of the signature's `b=FJHXlCwn…`, which ties the result to this exact signature.
+- **DMARC:** `dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=anarodriguezespinoza.com`. Both SPF and DKIM passed and aligned with the `From:` domain, though one would have been enough. `p=NONE` is my published policy, and `dis=NONE` means Gmail applied no disposition (no quarantine or reject).
+- **ARC:** two sets. `i=1` sealed by Zoho, and `i=2` by Google with `cv=pass` (the earlier set verified). ARC keeps these results if the message is later forwarded through a server that would break SPF. I didn't configure it; both providers add it.
+- **Mailer:** `User-Agent: Zoho Mail` / `X-Mailer: Zoho Mail`, the source of Gmail's "Using Zoho Mail" label.
+
 ## Conclusion
 
 The reply left through Zoho's servers, came from the custom address, and passed all three checks. DKIM with an aligned domain is the strongest of them: it would still pass if the message were relayed, while SPF can break when the connecting IP changes. That's why the DMARC result rests on it.
 
-*Not captured:* the raw header block under Gmail's summary (`Received:` chain, `Return-Path`, full `DKIM-Signature`, `Authentication-Results`). The summary above is what Gmail derives from those headers. Pasting the raw block would let the hop-by-hop `Received:` path be traced as well.
+## Raw headers
+
+Pasted from Gmail "Show original" on 2026-10-25. The personal Gmail address is kept visible (decision in [ex06.md](ex06.md)).
+
+```text
+Delivered-To: anarodriguez.e75@gmail.com
+Received: by 2002:a05:640c:7701:b0:27d:4857:905e with SMTP id l1csp7256318eiw; Mon, 19 Oct 2026 19:48:52 -0700 (PDT)
+X-Received: by 2002:a17:90b:582f:b0:3a6:f1d2:57f3 with SMTP id 98e67ed59e1d1-3acef542fa9mr8429514a91.58.1792464532453; Mon, 19 Oct 2026 19:48:52 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1792464532; cv=pass; d=google.com; s=arc-20260327; b=MNta3v1d/ghn/bc+mCb98aheN4J3q62HV8mldYJb9CDlNkYFGceEUdFXLy52wHb34w XZME2c8/doM+NpsX5ZUf25nHe/VAfXo+8/Tf7SG8o62MshnXNoDluUZG57vpeDv1f97b a/VLSjL60fdL3MsMXs+RdflBUWJVyXaVDFkQoIVWokYL7CIxd52tAAdV5QG94rHGCscq UKE1TKIf/jTi+pHNVPQukHErTQMWKtyT1lzJlcdmf2u1Aqwm1YD2eKjhLzjWGjd4CZ1e L35PbJKVXH2uIZgWI8oapzs4FNEOeZHs2v6HiEQkK0Lze/fXfKKb7olYSWDxwhgFbnS8 rtIA==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327; h=user-agent:content-transfer-encoding:mime-version:subject :message-id:to:from:date:dkim-signature; bh=aALFB1+YU0OqoiPde9KoOuZHnj0nZPzdcpg5ZCvoPVM=; fh=qcwBp3KF+bX7VA+o/HiqpbSCqPU8DlYn9/zSADtfV8Q=; b=r1qXLe9uPTRNaPQnRH9Y/shIraYMYZJR6EX8dnRzyCSUiRkq2GnFjmHlThxZ9DgKq2 KM9rPUvImepwGdvuI/vkND0DRmjuU5agjUaLgrFAkCNu1Kpe9RDXTI8zjh6FecRgh7vq 4xwavxhpdB77KpBwBnzZSK190CIDGeAxuZlcgy65ZWwlSaN+51SL10iqU+Onzz48/NFG 65Ed7DLn6bJvXDqtFZ1uDD0bjNnlkxVK43H4lUNpsU2k6pjKOAGblDZPC3OC1cPkCS+K nZA6QqAc0D8GzoR4Ik+4RDk02W4ly/QdPDUsHvxqbpvpftqXpI6+FqYRn+vJh+2FDPKE 0rsw==; dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com; dkim=pass header.i=@anarodriguezespinoza.com header.s=zmail header.b=FJHXlCwn; arc=pass (i=1 spf=pass spfdomain=anarodriguezespinoza.com dkim=pass dkdomain=anarodriguezespinoza.com dmarc=pass fromdomain=anarodriguezespinoza.com>); spf=pass (google.com: domain of ana@anarodriguezespinoza.com designates 165.173.180.52 as permitted sender) smtp.mailfrom=ana@anarodriguezespinoza.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=anarodriguezespinoza.com
+Return-Path: <ana@anarodriguezespinoza.com>
+Received: from sender6-of-o52.zoho.com (sender6-of-o52.zoho.com. [165.173.180.52]) by mx.google.com with ESMTPS id 41be03b00d2f7-cd654a116b5si17645045a12.103.2026.10.19.19.48.52 for <anarodriguez.e75@gmail.com> (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256); Mon, 19 Oct 2026 19:48:52 -0700 (PDT)
+Received-SPF: pass (google.com: domain of ana@anarodriguezespinoza.com designates 165.173.180.52 as permitted sender) client-ip=165.173.180.52;
+Authentication-Results: mx.google.com; dkim=pass header.i=@anarodriguezespinoza.com header.s=zmail header.b=FJHXlCwn; arc=pass (i=1 spf=pass spfdomain=anarodriguezespinoza.com dkim=pass dkdomain=anarodriguezespinoza.com dmarc=pass fromdomain=anarodriguezespinoza.com>); spf=pass (google.com: domain of ana@anarodriguezespinoza.com designates 165.173.180.52 as permitted sender) smtp.mailfrom=ana@anarodriguezespinoza.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=anarodriguezespinoza.com
+ARC-Seal: i=1; a=rsa-sha256; t=1792464530; cv=none; d=zohomail.com; s=zohoarc; b=e1V/zF1Q+cO9s/1C8ZZoePh4JwL2Fs2PZDm/cEhD2pywWFEI+maRO5CQAtUJwO3YsbtdmhxbTbv30tbs0OfMWwv9KtBwIrRhWh3k7IWmhjyAabKWVV6DnId1Ffmd/AnhE6GuNRA+pPv62vXMwXajSfRN2g8rfeV/5Ee7hfafJ8E=
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.com; s=zohoarc; t=1792464530; h=Content-Type:Content-Transfer-Encoding:Date:Date:From:From:MIME-Version:Message-ID:Subject:Subject:To:To:Message-Id:Reply-To:Cc; bh=aALFB1+YU0OqoiPde9KoOuZHnj0nZPzdcpg5ZCvoPVM=; b=cDle2Rg85n6Ks3c1ovg0SR9FcRzz4Ycra2Dfmp19WU34Od54fz5cqrO4cb086eaqK5tqQAtVsRCVsH/pCOwmWstYI+anbpQWMA8U0uXVYB2Zpl18cZD99WgcyPvk5Q/je1JiGldiYmMvHgifkb2i9OXNkGLnxu01LIWk+p9xXRc=
+ARC-Authentication-Results: i=1; mx.zohomail.com; dkim=pass
+  header.i=anarodriguezespinoza.com; spf=pass
+  smtp.mailfrom=ana@anarodriguezespinoza.com; dmarc=pass header.from=<ana@anarodriguezespinoza.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; t=1792464530; s=zmail; d=anarodriguezespinoza.com; i=ana@anarodriguezespinoza.com; h=Date:Date:From:From:To:To:Message-ID:Subject:Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:Message-Id:Reply-To:Cc; bh=aALFB1+YU0OqoiPde9KoOuZHnj0nZPzdcpg5ZCvoPVM=; b=FJHXlCwnoS732InrIvRs5AHrKBtHujDpoC4LeDj5MEYEAYQpLpKcqYG4cS8ipw08 MOLaSjlxPAtWDL3tA/XWtP3Nfw0fecxf89NmU0YU6EnVKhg5AUR4BhIKFpr/405jNvN uMwjweu0fOP/kiNEjXMGklYrv8OELR8MOOQQl9U0=
+Received: from mail.zoho.com by mx.zohomail.com with SMTP id 179246452893716.35744304090815; Mon, 19 Oct 2026 19:48:48 -0700 (PDT)
+Date: Mon, 19 Oct 2026 19:48:48 -0700
+From: ana@anarodriguezespinoza.com
+To: <anarodriguez.e75@gmail.com>
+Message-ID: <1a157362628.49bd9f15790467.4377731288972030860@anarodriguezespinoza.com>
+Subject: Re: Test 01: Inbound
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 7bit
+User-Agent: Zoho Mail
+X-Mailer: Zoho Mail
+
+Test 05: reply to Test 01 from Zoho.
+```
