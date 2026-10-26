@@ -2,7 +2,7 @@
 
 **Change:** keep the profile visible during a database outage, show a deliberate empty state, remove invented profile text, and seed only real content.
 **Commit:** `74d7a16` "feat: keep the profile up when the database is down"
-**Railway deployment:** `11a6840a-7eb7-4f2c-ad47-19848bb3d9d7`, built from pushed `main` at `57209d8` (which contains `74d7a16`), created 2026-10-26 05:16:15 UTC, status `SUCCESS`
+**Railway deployment:** `11a6840a-7eb7-4f2c-ad47-19848bb3d9d7`, built from pushed `main` at `57209d8` (which contains `74d7a16`). On 2026-10-26 the documentation history after `74d7a16` was rewritten, and `57209d8` became `a65ed56`. Only `README.md` differs between them, and the application code is identical to `74d7a16` (`git diff 74d7a16 a65ed56 -- app tests Dockerfile railway.json` is empty), created 2026-10-26 05:16:15 UTC, status `SUCCESS`
 
 ## 1. Diff review (before committing, 2026-10-21)
 
@@ -34,7 +34,7 @@ New tests written first and seen failing (4 failed, 12 passed) before the implem
 
 ## 3. Behavior observed at the domain after the deploy
 
-Pushed 2026-10-25 22:16 PDT (`9630190..57209d8 main -> main`); observed 2026-10-25 22:17 PDT (2026-10-26 05:17:31 UTC):
+Pushed 2026-10-25 22:16 PDT (`9630190..57209d8 main -> main`; `57209d8` is `a65ed56` after the rewrite); observed 2026-10-25 22:17 PDT (2026-10-26 05:17:31 UTC):
 
 | Check | Command | Expected | Observed |
 | --- | --- | --- | --- |
