@@ -4,7 +4,7 @@
 | --- | --- |
 | Repository | https://github.com/anarodriguezespinoza/career-platform-ana-rodriguezespinoza |
 | Live HTTPS URL | https://anarodriguezespinoza.com (Railway). `https://www.anarodriguezespinoza.com` redirects to it with a `301` |
-| Final commit SHA | FINAL_SHA |
+| Final commit SHA | `474cd41` |
 | Azure VM (kept running until the instructor's cleanup directions) | `vm-career-platform`, resource group `rg-career-platform`, Denmark East, public IP `9.205.26.169`, private IP `172.16.0.4` |
 
 The final commit is the one whose SHA is above and in Brightspace. The commit right after it changes only that line, because a commit can't contain its own hash. The last Railway deployment that changed application code was `11a6840a` (2026-10-26 05:16 UTC, `SUCCESS`, commit `57209d8`, which became `a65ed56` when the documentation history was rewritten on 2026-10-26; the application code is identical). Later commits change only documentation, and each one redeploys the same code.
