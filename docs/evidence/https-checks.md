@@ -16,6 +16,22 @@
 
 Before this change (same day, 18:21 PDT), `www` was DNS only, so `https://www…/` went straight to the Azure VM and returned `200` from Nginx with the VM's own certificate (SAN `anarodriguezespinoza.com, www.anarodriguezespinoza.com`). That meant `www` showed the old Azure copy of the site instead of the root.
 
+## After the Railway recovery (2026-10-25 22:20 PDT)
+
+Re-run after the password rotation, the `PORT=8000` fix, and deployment `11a6840a`:
+
+```text
+captured 2026-10-26T05:20:54Z
+http://www.anarodriguezespinoza.com/ code=301 redirect=https://anarodriguezespinoza.com/ ssl_verify=0
+https://www.anarodriguezespinoza.com/ code=301 redirect=https://anarodriguezespinoza.com/ ssl_verify=0
+http://anarodriguezespinoza.com/ code=301 redirect=https://anarodriguezespinoza.com/ ssl_verify=0
+https://anarodriguezespinoza.com/ code=200 redirect= ssl_verify=0
+{"status":"ok","database":"up","publicSource":"database"}
+issuer=C=US, O=Let's Encrypt, CN=YE2 notBefore=Oct  8 21:23:52 2026 GMT notAfter=Jan  6 21:23:51 2027 GMT  DNS:anarodriguezespinoza.com
+```
+
+Every row in the results table now passes, including the root page (`200`).
+
 ## Renewal arrangement
 
 - **Root domain (Railway):** Railway requests and renews the Let's Encrypt certificate for a verified custom domain itself. Nothing on my side runs certbot. Renewal depends on two things staying true: the `CNAME @ → jf53ce39.up.railway.app` record stays **DNS only** (Railway must answer the ACME challenge itself), and the `_railway-verify` TXT stays in place. The current certificate expires 2027-01-06. Let's Encrypt certificates last 90 days and are normally renewed around 30 days before expiry, so a certificate still showing `notAfter=Jan 6 2027` after mid-December would mean renewal is stuck.

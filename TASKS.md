@@ -10,7 +10,7 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 - [x] Recovery without restart is tested (fail DB, then restore, then refresh returns 200 with projects) → `tests/test_public_routes.py`
 - [x] Seed doesn't invent experience: label or remove the "Software Engineer at Career Platform, 2024" entry → `app/seed.py`
 - [ ] A real project entry exists in the live database (e.g. "This website, in progress," labeled) → check: `/projects` on the live site
-- [ ] Profile shows education and professional links → check: live home and about pages
+- [x] Profile shows education and professional links → check: live home and about pages
 - [x] The initial choice of database engine (SQLite) is written down with the reason → README decisions section
 
 ## 2. Azure deployment
@@ -41,7 +41,7 @@ Due Thursday, October 22, 2026, 1:45 PM. Gaps found by auditing the repository a
 
 ## 5. Reviewed change through Railway
 
-- [ ] One reviewed change linked to its commit SHA, its Railway deployment ID, and the behavior observed at the domain → `docs/evidence/` and the submission index
+- [x] One reviewed change linked to its commit SHA, its Railway deployment ID, and the behavior observed at the domain → `docs/evidence/` and the submission index
 - [x] Record the diff review and the local check done before the push → same evidence file
 - [x] Restore a previous working version, for code and for database changes → README rollback section
 

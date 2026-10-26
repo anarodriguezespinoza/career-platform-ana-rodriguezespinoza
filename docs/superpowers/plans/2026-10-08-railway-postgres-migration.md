@@ -243,8 +243,8 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
 **Result:**
 - 5.1–5.3: done on 2026-10-08. The README records project `rare-smile`, environment `production`, service `career-platform-ana-rodriguezespinoza`, a Postgres 18 service named `Postgres`, and the three variables `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `APP_ENV=production`, `SITE_URL=https://anarodriguezespinoza.com`.
 - 5.4: Railway's certificate for `anarodriguezespinoza.com` was issued 2026-10-08 21:23 UTC, and the Cloudflare `CNAME @ → jf53ce39.up.railway.app` and `_railway-verify` TXT were created 2026-10-08 22:18–22:19 UTC (see `docs/evidence/dns-records-final.md`).
-- **TODO (needs `railway login`):** record the first successful deployment ID and its pre-deploy log line (`railway deployment list`, `railway logs --deployment <id> | grep "Running upgrade"`).
-- **2026-10-21 18:45 PDT: the custom domain returns `502 Application failed to respond`** from Railway's edge. The deployment needs to be checked and fixed before Task 6's post-cutover checks can be repeated.
+- Deployment history (`railway deployment list`, read 2026-10-25): the first deployment was `b362f124` at 2026-10-08 21:27 UTC, built from `0f454a5`, which is **before** the Task 1–4 commits. Those commits were committed on 2026-10-08 on branch `railway-migration` but only reached `main` on 2026-10-20. So the first deployment that used `railway.json` (pre-deploy `alembic upgrade head`, `$PORT`, health check) was **`30d66d37` at 2026-10-20 05:14 UTC** (commit `90d8101`). Deployments before it ran the old image, with a hard-coded port 8000 and no pre-deploy migration.
+- 2026-10-21 to 2026-10-25: the custom domain returned `502` (Railway incident, then a `PORT` mismatch). Fixed 2026-10-25, see "Recovering from the Railway incident" below. Current deployment: `11a6840a` (2026-10-26 05:16 UTC, commit `57209d8`), `SUCCESS`.
 
 ---
 
@@ -290,7 +290,7 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
 
 **Result:**
 - 6.1 / 6.2: the VM's `data.db` was last modified **2026-10-06 18:44** (VM time, UTC), before the copy on 2026-10-08, and it still holds `ContactInquiry: 6`, `Project: 0`, `Profile: 0` (checked 2026-10-21). No write reached SQLite after the copy was taken. The app service on the VM is running again (it was restarted for the 2026-10-21 reboot test), so the VM still serves its own copy at `9.205.26.169`. It no longer receives domain traffic, because `@` points at Railway and `www` redirects to `@` (2026-10-22 01:44 UTC).
-- 6.3 / 6.4: **TODO (needs `railway login`):** paste the copy tool's output (`ContactInquiry: 6`, content tables `0`) and the post-cutover health and `/contact` results.
+- 6.3 / 6.4: no output from the copy run was saved. Whether the 6 inquiries are in Postgres is checked by 6.6 (comparison), using the VM file copied on 2026-10-25 (`~/career-platform-cutover/data-2026-10-25.db`, SHA-256 prefix `441d75db11ac6706`, identical to the VM's `data.db`; 6 ContactInquiry rows, 1 with integer and 5 with text `createdAt`, and 0 content rows). Post-cutover checks on 2026-10-25 after the recovery: `/api/health` `ok`, `/` `200` (`docs/evidence/https-checks.md`).
 - 6.5: **not done, on purpose.** The VM stays running: Project 1 requires the Azure deployment to remain up. See the reconciliation note below.
 
 #### 6.6 Compare source and target (added 2026-10-21)
@@ -304,7 +304,7 @@ Ops task. Each step uses the same Where / Run / Check / Undo format as `2026-10-
   ```
 - **Why:** row counts alone can't tell a copy from a re-seed. `compare_databases` matches rows by primary key and compares every column after the copy tool's conversions, and prints counts only. The six inquiries, with their original ids and Prisma-era timestamps (one stored as integer milliseconds), can't be produced by `python -m app.seed`, which creates no inquiries. If they match, the original data was transferred.
 - **Check:** `ContactInquiry | 6 | N | 6 | 0 | 0 | N-6`: all 6 source rows `matched`, none `changed` or `missing`. `extra` counts inquiries submitted on Railway after cutover, plus the content rows added on 2026-10-21. Exit code `0`.
-- **Result:** TODO (needs `railway login`).
+- **Result:** TODO: paste the output of the production checks script here and in `docs/evidence/migration-comparison.md`.
 
 ### Reconciling this plan with the Project 1 requirements (2026-10-21)
 

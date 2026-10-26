@@ -2,7 +2,7 @@
 
 **Change:** keep the profile visible during a database outage, show a deliberate empty state, remove invented profile text, and seed only real content.
 **Commit:** `74d7a16` "feat: keep the profile up when the database is down"
-**Railway deployment:** TODO: deployment ID from `railway deployment list` after the push
+**Railway deployment:** `11a6840a-7eb7-4f2c-ad47-19848bb3d9d7`, built from pushed `main` at `57209d8` (which contains `74d7a16`), created 2026-10-26 05:16:15 UTC, status `SUCCESS`
 
 ## 1. Diff review (before committing, 2026-10-21)
 
@@ -34,15 +34,17 @@ New tests written first and seen failing (4 failed, 12 passed) before the implem
 
 ## 3. Behavior observed at the domain after the deploy
 
-TODO after the push and Railway deploy:
+Pushed 2026-10-25 22:16 PDT (`9630190..57209d8 main -> main`); observed 2026-10-25 22:17 PDT (2026-10-26 05:17:31 UTC):
 
 | Check | Command | Expected | Observed |
 | --- | --- | --- | --- |
-| Deploy went live | `railway deployment list` | new deployment `SUCCESS`, matching commit | |
-| Health | `curl -sS https://anarodriguezespinoza.com/api/health` | `{"status":"ok","database":"up","publicSource":"database"}` | |
-| Real project | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "This website (in progress)"` | match (after the seed is run on production) | |
-| Education and links | `curl -sS https://anarodriguezespinoza.com/about \| grep -o "Loyola Marymount University"` | match | |
-| No invented text | `curl -sS https://anarodriguezespinoza.com/about \| grep -c "hello@example.com"` | `0` | |
+| Deploy went live | `railway deployment list` | new deployment `SUCCESS`, matching commit | `11a6840a` `BUILDING` → `DEPLOYING` → `SUCCESS`, commit `57209d8`; log `Uvicorn running on http://0.0.0.0:8000` |
+| Health | `curl -sS https://anarodriguezespinoza.com/api/health` | `{"status":"ok","database":"up","publicSource":"database"}` | same |
+| Pages | `curl -o /dev/null -w '%{http_code}'` on `/`, `/about`, `/projects` | `200` | `200`, `200`, `200` |
+| Education and links | `curl -sS https://anarodriguezespinoza.com/about \| grep -o …` | `Loyola Marymount University`, LinkedIn and GitHub URLs | all three present (new behavior; before this deploy `/about` had no education or links) |
+| No invented text | `curl -sS https://anarodriguezespinoza.com/about \| grep -c "hello@example.com"` | `0` | `0` |
+| Empty state | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "No projects are published yet."` | match while production has no project rows | match (new behavior; before, the grid was silently empty) |
+| Real project | `curl -sS https://anarodriguezespinoza.com/projects \| grep -o "This website (in progress)"` | match after `app.seed` runs on production | TODO after the seed |
 
 ## 4. How to undo it
 
