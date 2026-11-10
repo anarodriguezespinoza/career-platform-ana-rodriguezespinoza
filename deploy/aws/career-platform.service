@@ -1,0 +1,24 @@
+# systemd unit for the career platform on the AWS EC2 instance (Ubuntu 26.04).
+# Installed at /etc/systemd/system/career-platform.service.
+# Secrets live in /etc/career-platform/app.env (root, mode 600), which systemd reads before dropping to the app user.
+[Unit]
+Description=career-platform (FastAPI via Uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=career-platform
+Group=career-platform
+WorkingDirectory=/opt/career-platform/app
+EnvironmentFile=/etc/career-platform/app.env
+# Listens on loopback only; Nginx is the only way in. Trust forwarded headers from Nginx alone.
+ExecStart=/opt/career-platform/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
