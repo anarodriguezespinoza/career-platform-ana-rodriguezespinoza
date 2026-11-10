@@ -240,7 +240,7 @@ Done one phase at a time over SSH. Railway and its DNS were not changed.
 
 - [x] §1–§10: done (see the log above).
 - [x] §11: cutover on 2026-11-10 at about 06:59 UTC.
-- [ ] §1: create the zero-spend budget in the console (account owner).
+- [x] §1: zero-spend budget created. Billing home on 2026-11-10 shows 1 active budget, status OK, and $5.54 month-to-date, covered by Free plan credits.
 - [ ] §2: put a copy of the dumps on separate storage, add a nightly
       `pg_dump`, and turn off Railway's public database access after the
       rollback period.
